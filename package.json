@@ -1,0 +1,22 @@
+{
+  "name": "tailgate",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test dist/apps/api/src/index.test.js dist/packages/domain/src/index.test.js",
+    "dev:api": "npm run build && node dist/apps/api/src/local.js"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "@types/node": "^22.18.0"
+  }
+}
