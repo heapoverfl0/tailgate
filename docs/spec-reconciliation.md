@@ -14,14 +14,14 @@ Reviewed both supplied original Markdown files in full on September 9, 2026. Ori
 
 ## Starter boundaries
 
-Existing scoring helpers agree with confidence, ATS, one-point Main Event and score-error rules, but are not a complete scoring engine. NO_UPSET, proposition resolution, card validation, projection, correlated outcomes and finalization remain unimplemented. A non-ATS PUSH currently returns zero in the low-level helper; this does not settle how a Main Event total push should resolve.
+Existing scoring helpers agree with confidence, ATS, one-point Main Event and score-error rules, but are not a complete scoring engine. The subsequent [domain milestone](domain-milestone.md) implements NO_UPSET, card validation and scoring from supplied resolutions. Game-to-proposition resolution, projection, correlated outcomes and finalization remain unimplemented. A non-ATS PUSH currently returns zero in the low-level helper; this does not settle how a Main Event total push should resolve.
 
 ContestSummary and the public demo read are development-only summary contracts, not the complete Contest or a production read model. The small repository and provider interfaces are scaffolding, not full implementations of section 28. No authentication or secret pick data exists in the fixture. The poller is inactive. React, DynamoDB, realtime and Terraform implementation have not started. Add the packages/realtime boundary described in section 5 when implementing publishing.
 
 ## Remaining implementation decisions and source gaps
 
 - Architecture 25.2 illustrates a revision header; 27.1 uses expectedCardRevision in JSON. Use the explicit 27.1 body contract as the implementation baseline and document any future header support.
-- Draft autosaves must allow valid partial cards. Submitted cards must enforce six unique confidence values. Specify duplicate-confidence handling for incomplete cards at lock, and clearing after submission, before implementing writes.
+- Draft autosaves must allow valid partial cards. Submitted cards must enforce six unique confidence values. The domain milestone now documents duplicate-confidence handling and rejects clearing submitted cards; repository integration remains pending.
 - Define a total-push representation and same-game correlated outcome constraints before scoring/outcome resolution. Avoid inferring a domain result from the helper alone.
 - Scoreboard GameState lacks first-scoring-play and halftime snapshots. Extend the provider/domain boundary explicitly after verifying CFBD coverage; current scores alone cannot resolve those props reliably.
 - Specify atomic lock conditions, join exchange retry recovery, active-contest lookup, AppSync authorization and the Saturday timezone/window during their implementation.

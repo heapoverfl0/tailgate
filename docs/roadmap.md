@@ -12,7 +12,7 @@ Source of truth: [Product spec](../tailgate-pickem-game-design-spec.md) and [Arc
 
 ## M0 — first deployable slice
 
-1. Implement complete domain/card contracts and fixture tests, including NO_UPSET, partial drafts, confidence uniqueness, Main Event exclusion and frozen lines.
+1. Completed the pick-card domain milestone: models, configuration validation/freezing, draft/Submit guards, resolution-based scoring and champion selection. See [domain milestone](domain-milestone.md) for decisions and remaining resolver work.
 2. Implement DynamoDB keys/repositories, atomic revision/lock checks, seed and contest create/read.
 3. Implement commissioner login and join/approval/one-time session exchange with privacy tests.
 4. Implement React/Vite participant and shared-display shell against purpose-built API views.

@@ -26,7 +26,8 @@ The local API listens on http://localhost:3001. Try `/api/health` and `/api/cont
 - `apps/poller`: explicitly inactive polling stub
 - `apps/web`: frontend implementation boundary
 - `packages/contracts`: initial shared types
-- `packages/domain`: scoring primitives
+- `packages/domain`: pick-card models, frozen configuration, validation, scoring and tiebreaks
+- [Domain milestone](docs/domain-milestone.md): implemented rules and boundaries
 - `packages/persistence`: repository boundary and development fixture
 - `packages/game-data`: provider boundary
 - `infra/terraform`: deployment planning notes
