@@ -10,10 +10,12 @@ Requires Node.js 22.18+ and npm.
 npm ci --ignore-scripts
 npm test
 npm run build
+cp .env.example .env
+# Set COMMISSIONER_PASSWORD and SESSION_SIGNING_SECRET (at least 32 characters) in .env.
 npm run dev:api
 ```
 
-The local API listens on http://localhost:3001. Try `/api/health` and `/api/contests/demo`. Its seeded contest is development data and is held in memory.
+The local API listens on http://127.0.0.1:3001 and saves state in the ignored `.local/tailgate.json` file. Try `/api/health`. Start with an empty store, log in, and create a contest using the [local API workflow](docs/local-api.md). All mutation requests must send the configured `Origin` and JSON content type. The separate original Lambda skeleton still has an in-memory demo; it is not a deployed version of the local flow.
 
 ## Project map
 
@@ -32,4 +34,4 @@ The local API listens on http://localhost:3001. Try `/api/health` and `/api/cont
 - `packages/game-data`: provider boundary
 - `infra/terraform`: deployment planning notes
 
-This is a tested starting foundation, not the completed M0 deployment. Authentication, joins, card writes, React UI, AWS adapters and infrastructure are still pending. No cloud resources have been created.
+This is a tested starting foundation, not the completed M0 deployment. The durable local API supports login, contest creation, join/approval and card save/Submit. React UI, DynamoDB/AWS adapters, realtime and infrastructure remain pending. No cloud resources have been created.

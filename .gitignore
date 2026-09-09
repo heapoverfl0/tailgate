@@ -10,3 +10,5 @@ dist/
 *.tfvars
 !*.tfvars.example
 crash.log
+
+.local/

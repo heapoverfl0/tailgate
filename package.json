@@ -12,8 +12,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "npm run build && node --test dist/apps/api/src/index.test.js dist/packages/domain/src/index.test.js dist/packages/domain/src/card.test.js",
-    "dev:api": "npm run build && node dist/apps/api/src/local.js"
+    "test": "npm run build && node --test dist/apps/api/src/index.test.js dist/packages/domain/src/index.test.js dist/packages/domain/src/card.test.js dist/apps/api/src/service.test.js",
+    "dev:api": "npm run build && node --env-file=.env dist/apps/api/src/local.js"
   },
   "devDependencies": {
     "typescript": "~5.9.3",
