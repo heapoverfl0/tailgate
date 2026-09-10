@@ -65,3 +65,18 @@ TAILGATE_DYNAMO_TEST_ENDPOINT=http://127.0.0.1:8000 npm run test:integration
 The test accepts only a loopback HTTP endpoint, supplies dummy credentials, creates a uniquely named test table and deletes only that table in cleanup. It exercises the full API through the SDK, including duplicate creation, approval, competing exchanges, hashed sessions, save/Submit, canonical conflicts, denial, privacy, lock and revocation. Without the endpoint it explicitly skips.
 
 Validation on this machine: 56 unit/API/SDK-contract tests passed and TypeScript built successfully. The integration suite compiled but was skipped: no local endpoint was configured and Docker's daemon was unavailable. No database runtime or dependency was downloaded, no AWS credentials were used, and actual DynamoDB expression validation remains outstanding.
+
+
+### Local database validation completed — September 10, 2026
+
+The integration scenario passed against the actual pinned DynamoDB Local 3.3.1 runtime with no skipped tests. This exercised DynamoDB's query and transaction expression evaluation through the real SDK. The run caught an integration harness error: the SDK waiter's default 20-second minimum delay conflicted with our 20-second maximum wait. The test now explicitly polls every 1–2 seconds within that deadline.
+
+To repeat the user-accepted limited test with the image already cached:
+
+```sh
+python3 scripts/test-dynamodb-local.py
+```
+
+Requires Docker, Python 3 and JDK 17+ (`javac`). The runner creates its own network-disabled, non-root container, uses a temporary loopback relay, and removes it afterward. It bounds the test process to 150 seconds. See the dependency review for the accepted runtime findings and isolation details. No AWS service or credentials are used.
+
+This validates the covered database operations locally. AWS IAM, Lambda deployment packaging, API Gateway integration, distributed locking, throttling, and service behavior still require Terraform and deployed testing.

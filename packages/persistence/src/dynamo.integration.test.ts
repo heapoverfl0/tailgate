@@ -16,7 +16,7 @@ test('DynamoDB Local: API joins, atomic session exchange, cards, privacy, denial
   const table = `tailgate-test-${randomUUID()}`;
   await client.send(new CreateTableCommand({ TableName: table, BillingMode: 'PAY_PER_REQUEST', KeySchema: [{ AttributeName:'PK',KeyType:'HASH' },{AttributeName:'SK',KeyType:'RANGE'}], AttributeDefinitions:[{AttributeName:'PK',AttributeType:'S'},{AttributeName:'SK',AttributeType:'S'}] }));
   try {
-    await waitUntilTableExists({ client, maxWaitTime: 20 }, { TableName: table });
+    await waitUntilTableExists({ client, maxWaitTime: 20, minDelay: 1, maxDelay: 2 }, { TableName: table });
     let at = new Date('2026-09-12T15:00:00Z');
     const repository = new DynamoContestRepository(document, table, () => at);
     const settings = { origin:'https://tailgate.test',password:'local-test-password',signingSecret:'local-test-signing-secret-at-least-32-characters',secureCookies:true,now:()=>at };

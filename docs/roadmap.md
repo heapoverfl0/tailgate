@@ -13,7 +13,7 @@ Source of truth: [Product spec](../tailgate-pickem-game-design-spec.md) and [Arc
 ## M0 — first deployable slice
 
 1. Completed the pick-card domain milestone: models, configuration validation/freezing, draft/Submit guards, resolution-based scoring and champion selection. See [domain milestone](domain-milestone.md) for decisions and remaining resolver work.
-2. Durable local repository and contest create/read are implemented; DynamoDB contest/card adapter and key/transaction contract tests are now implemented; see [DynamoDB milestone](dynamodb-milestone.md). The API now uses explicit repository operations, atomic DynamoDB join/session writes and the configured Lambda entry point. Actual database integration validation and cloud deployment remain pending.
+2. Durable local repository and contest create/read are implemented; DynamoDB contest/card adapter and key/transaction contract tests are now implemented; see [DynamoDB milestone](dynamodb-milestone.md). The API now uses explicit repository operations, atomic DynamoDB join/session writes and the configured Lambda entry point. The local database integration scenario now passes against DynamoDB Local. Cloud deployment and validation remain pending.
 3. Commissioner login, join/approval/session exchange, card save/Submit and privacy/concurrency tests now run locally. See [local API milestone](local-api.md). Lambda wiring is implemented; packaging, deployment and session recovery remain pending.
 4. Implement React/Vite participant and shared-display shell against purpose-built API views.
 5. Add realtime interface/AppSync wiring and local Lambda ZIP builds.

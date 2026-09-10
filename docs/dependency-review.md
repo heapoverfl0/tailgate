@@ -45,3 +45,14 @@ This review does not cover every repackaged/unidentified jar, the OS, the JRE, o
 Proposed limited test, if accepted: a disposable non-root container pinned to this digest, loopback-only ephemeral port, no host mounts or real credentials, read-only root filesystem with temporary scratch space, dropped capabilities, no-new-privileges, bounded memory/CPU, an isolated internal Docker network, and deletion of the test's own container/network after the run. Tests use synthetic data and dummy credentials. This reduces exposure but does not remediate the flagged libraries. The alternative is to proceed to Terraform and test against the managed AWS service after selecting the personal AWS account.
 
 Sources: [AWS local setup](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.DownloadingAndRunning.html), [official image tags](https://hub.docker.com/r/amazon/dynamodb-local/tags), [published POM](https://repo.maven.apache.org/maven2/software/amazon/dynamodb/DynamoDBLocal/3.3.1/DynamoDBLocal-3.3.1.pom).
+
+
+### Accepted limited local run
+
+The user explicitly accepted the limited local run after reviewing these findings. This acceptance applies to the disposable test runtime; it is not a claim that the dependencies are fixed or suitable for deployment.
+
+The test passed against the pinned DynamoDB Local 3.3.1 image. Docker did not publish ports from the internal network on this host, so the successful run used the stronger `--network none` setting with a loopback-only host relay over `docker exec` stdin/stdout. The small Java relay connects only to port 8000 inside the container. The container ran as its non-root user, with no host mounts or real credentials, a read-only root, dropped capabilities, no-new-privileges, 512 MiB memory and one CPU. A 128 MiB temporary filesystem permits loading the bundled SQLite native library. No additional runtime artifacts were downloaded.
+
+All temporary containers/networks from setup attempts were removed; the successful test's container and host relay were also removed. The pinned image remains cached for repeat testing. Docker Desktop remains running; no shared Docker defaults, AWS profiles or Git authentication settings were changed.
+
+The checked-in `scripts/test-dynamodb-local.py` reproduces this isolation using an already cached image and installed JDK/Python/Docker. It does not pull images. The underlying dependency findings and unidentified-library coverage gaps remain applicable on future runs.
