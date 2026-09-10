@@ -27,3 +27,21 @@ After user approval, npm ci --ignore-scripts --no-audit --no-fund installed the 
 Added exact versions @aws-sdk/client-dynamodb 3.1129.0 and @aws-sdk/lib-dynamodb 3.1129.0 to the persistence workspace. Resolved metadata with --package-lock-only before installation, then queried Sonatype Guide for all 34 external packages in the lockfile (31 new plus the original three). Every query succeeded and returned policyCompliance.compliant=true, malicious=false and endOfLife=false. All passed the configured CVSS < 7.0, No Copyleft Licenses and No Malware checks. No package was marked hasInstallScript in the lockfile. Installed with npm ci --ignore-scripts --no-audit --no-fund.
 
 Exact versions and raw component results are preserved in [sonatype-sdk-review.json](sonatype-sdk-review.json). This is a policy check, not a zero-vulnerability guarantee or a source/artifact audit. The registry audit was not rerun for this change; Guide checked the complete resolved graph.
+
+## DynamoDB Local runtime review — September 10, 2026
+
+Selected the official AWS-linked image `amazon/dynamodb-local:3.3.1@sha256:ff89bd48ff32cd8d9be5fee8873b65b8854dc408f1afe881be6eb00247bc0dab` (linux/arm64 manifest `sha256:0b8779f3e5a761cb41c7b7610d1a67518964a22a9ca063b4a53c8c312b933485`). Docker Desktop was started. No shared AWS/Git configuration was changed.
+
+Before downloading runtime layers, queried Guide for DynamoDBLocal 3.3.1 and the Docker coordinate. The Maven component passed; Guide could not resolve the Docker coordinate. Registry attestations supplied build provenance but no SBOM. A POM-only traversal produced a candidate dependency graph; 108 exact coordinates were reviewed, with policy failures and one unresolved Ion version range. That traversal was preliminary rather than a Maven-resolved lockfile or an image inventory, and included inherited dependencies which may not ship in the image.
+
+Downloaded the pinned image for static inspection after those checks. Created a container without starting it, copied its library files to a temporary inspection directory, and removed that inspection container. No DynamoDB process or integration test was run.
+
+The actual image differs materially from its published POM: for example, Jackson jars are named 2.21.5 rather than the POM's 2.12.7. Do not apply the preliminary old-Jackson findings to this image. Static inspection found 116 jars; 59 exposed Maven coordinates covering 52 distinct components. Guide results for those coordinates are preserved with all jar hashes and unmapped entries in [sonatype-dynamodb-local-review.json](sonatype-dynamodb-local-review.json).
+
+Confirmed shipped versions include Netty 4.1.135.Final and Jetty 12.1.11. Sixteen identified components fail Guide's CVSS threshold, including jetty-http (8.3), jetty-server (8.7), netty-handler (9.1), and netty-codec-xml (9.8). These are component-version findings; exploit reachability in DynamoDB Local was not established. Separate license flags include Jetty's Apache-2.0 OR EPL-2.0 alternatives; a generic copyleft policy flag does not itself establish a licensing incompatibility.
+
+This review does not cover every repackaged/unidentified jar, the OS, the JRE, or native binaries. No runtime approval is claimed. The downloaded image remains inert in Docker's cache. Integration testing remains pending a decision on the findings.
+
+Proposed limited test, if accepted: a disposable non-root container pinned to this digest, loopback-only ephemeral port, no host mounts or real credentials, read-only root filesystem with temporary scratch space, dropped capabilities, no-new-privileges, bounded memory/CPU, an isolated internal Docker network, and deletion of the test's own container/network after the run. Tests use synthetic data and dummy credentials. This reduces exposure but does not remediate the flagged libraries. The alternative is to proceed to Terraform and test against the managed AWS service after selecting the personal AWS account.
+
+Sources: [AWS local setup](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.DownloadingAndRunning.html), [official image tags](https://hub.docker.com/r/amazon/dynamodb-local/tags), [published POM](https://repo.maven.apache.org/maven2/software/amazon/dynamodb/DynamoDBLocal/3.3.1/DynamoDBLocal-3.3.1.pom).
