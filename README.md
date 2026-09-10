@@ -30,7 +30,8 @@ The local API listens on http://127.0.0.1:3001 and saves state in the ignored `.
 - `packages/contracts`: initial shared types
 - `packages/domain`: pick-card models, frozen configuration, validation, scoring and tiebreaks
 - [Domain milestone](docs/domain-milestone.md): implemented rules and boundaries
-- `packages/persistence`: repository boundary and development fixture
+- `packages/persistence`: durable local store and DynamoDB contest/card adapter
+- [DynamoDB milestone](docs/dynamodb-milestone.md): transaction behavior and integration limits
 - `packages/game-data`: provider boundary
 - `infra/terraform`: deployment planning notes
 

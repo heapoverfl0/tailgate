@@ -21,3 +21,9 @@ Next installation should use npm ci --ignore-scripts to preserve the audited dep
 ## Installation and validation — September 9, 2026
 
 After user approval, npm ci --ignore-scripts --no-audit --no-fund installed the reviewed lockfile successfully (three external packages and seven local workspace links). npm test ran the TypeScript build and all six tests successfully. This supersedes the pre-install status above. No cloud resources or GitHub repository were created.
+
+## AWS SDK review — September 10, 2026
+
+Added exact versions @aws-sdk/client-dynamodb 3.1129.0 and @aws-sdk/lib-dynamodb 3.1129.0 to the persistence workspace. Resolved metadata with --package-lock-only before installation, then queried Sonatype Guide for all 34 external packages in the lockfile (31 new plus the original three). Every query succeeded and returned policyCompliance.compliant=true, malicious=false and endOfLife=false. All passed the configured CVSS < 7.0, No Copyleft Licenses and No Malware checks. No package was marked hasInstallScript in the lockfile. Installed with npm ci --ignore-scripts --no-audit --no-fund.
+
+Exact versions and raw component results are preserved in [sonatype-sdk-review.json](sonatype-sdk-review.json). This is a policy check, not a zero-vulnerability guarantee or a source/artifact audit. The registry audit was not rerun for this change; Guide checked the complete resolved graph.
