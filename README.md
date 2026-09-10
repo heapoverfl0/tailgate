@@ -15,7 +15,7 @@ cp .env.example .env
 npm run dev:api
 ```
 
-The local API listens on http://127.0.0.1:3001 and saves state in the ignored `.local/tailgate.json` file. Try `/api/health`. Start with an empty store, log in, and create a contest using the [local API workflow](docs/local-api.md). All mutation requests must send the configured `Origin` and JSON content type. The separate original Lambda skeleton still has an in-memory demo; it is not a deployed version of the local flow.
+The local API listens on http://127.0.0.1:3001 and saves state in the ignored `.local/tailgate.json` file. Try `/api/health`. Start with an empty store, log in, and create a contest using the [local API workflow](docs/local-api.md). All mutation requests must send the configured `Origin` and JSON content type. The Lambda entry point uses the same service with DynamoDB; it requires TAILGATE_TABLE, APP_ORIGIN (HTTPS), COMMISSIONER_PASSWORD and SESSION_SIGNING_SECRET. It has not been deployed.
 
 ## Project map
 
@@ -35,4 +35,4 @@ The local API listens on http://127.0.0.1:3001 and saves state in the ignored `.
 - `packages/game-data`: provider boundary
 - `infra/terraform`: deployment planning notes
 
-This is a tested starting foundation, not the completed M0 deployment. The durable local API supports login, contest creation, join/approval and card save/Submit. React UI, DynamoDB/AWS adapters, realtime and infrastructure remain pending. No cloud resources have been created.
+This is a tested starting foundation, not the completed M0 deployment. The durable local API supports login, contest creation, join/approval and card save/Submit. The DynamoDB API adapter and Lambda wiring are implemented. React UI, realtime, infrastructure and database integration validation remain pending. No cloud resources have been created.

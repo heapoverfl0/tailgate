@@ -112,6 +112,50 @@ test('lock reached while loading snapshot prevents any write submission', async 
 test('session resolution checks expiry, contest scope and active participant even before TTL cleanup', async () => {
   for (const [expiresAt, contestId, status, allowed] of [[at.getTime()-1,'week','ACTIVE',false],[at.getTime()+1000,'other','ACTIVE',false],[at.getTime()+1000,'week','NOT_PLAYING',false],[at.getTime()+1000,'week','ACTIVE',true]] as const) {
     const repo = new DynamoContestRepository(client(async command => ({ Item: command.input.Key.PK.startsWith('SESSION#') ? { data:{contestId,participantId:'player',expiresAt} } : { data:{status} } })), 'table', () => at);
-    assert.equal(!!await repo.resolveSession('secret','week'), allowed);
+    if (expiresAt > at.getTime() && (contestId !== 'week' || status !== 'ACTIVE')) await assert.rejects(repo.resolveSession('secret','week'), /FORBIDDEN/);
+    else assert.equal(!!await repo.resolveSession('secret','week'), allowed);
+  }
+});
+
+test('approval atomically consumes pending request and creates participant/profile with contest guard', async () => {
+  let transaction: any;
+  const repo = new DynamoContestRepository(client(async command => {
+    if (command instanceof GetCommand) return { Item: { data: { id: 'join', contestId: 'week', name: 'Player', status: 'PENDING', secretHash: 'hash' } } };
+    transaction = command.input; return {};
+  }), 'table', () => at);
+  await repo.decideJoin('week', 'join', participant);
+  assert.equal(transaction.TransactItems.length, 4);
+  assert.match(transaction.TransactItems[0].Update.ConditionExpression, /lockAtMs > :now/);
+  assert.match(transaction.TransactItems[0].Update.UpdateExpression, /#pending - :one/);
+  assert.equal(transaction.TransactItems[1].Put.ExpressionAttributeValues[':pending'], 'PENDING');
+  assert.equal(transaction.TransactItems[2].Put.Item.data.participantId, 'player');
+  assert.equal(JSON.stringify(transaction).includes('SESSION#'), false);
+});
+test('exchange rejects wrong secret before writes and atomically stores only token hash with TTL seconds', async () => {
+  const { hashToken } = await import('./repository.js');
+  let transaction: any; let writes = 0;
+  const repo = new DynamoContestRepository(client(async command => {
+    if (command instanceof GetCommand) return { Item: { data: { id: 'join', contestId: 'week', name: 'Player', status: 'APPROVED', participantId: 'player', secretHash: hashToken('request-secret') } } };
+    writes++; transaction = command.input; return {};
+  }), 'table', () => at);
+  const session = { contestId: 'week', participantId: 'player', expiresAt: at.getTime() + 100000 };
+  await assert.rejects(repo.exchangeJoin('week','join','bad','raw-participant-token',session), /UNAUTHENTICATED/); assert.equal(writes,0);
+  await repo.exchangeJoin('week','join','request-secret','raw-participant-token',session);
+  assert.equal(transaction.TransactItems.length,4);
+  assert.equal(transaction.TransactItems[1].Put.ExpressionAttributeValues[':approved'], 'APPROVED');
+  assert.equal(transaction.TransactItems[2].ConditionCheck.ExpressionAttributeValues[':active'], 'ACTIVE');
+  const issued = transaction.TransactItems[3].Put.Item;
+  assert.deepEqual({ PK: issued.PK, SK: issued.SK }, keys.session('raw-participant-token'));
+  assert.equal(issued.expiresAt, Math.floor(session.expiresAt / 1000));
+  assert.equal(JSON.stringify(transaction).includes('raw-participant-token'), false);
+});
+test('join transaction cancellation distinguishes raced request, inactive participant and contention', async () => {
+  const { hashToken } = await import('./repository.js');
+  for (const [index, reason, code] of [[0,'ConditionalCheckFailed','LOCKED'],[1,'ConditionalCheckFailed','JOIN_ALREADY_HANDLED'],[2,'ConditionalCheckFailed','FORBIDDEN'],[0,'TransactionConflict','TRANSACTION_RETRY_REQUIRED']] as const) {
+    const repo = new DynamoContestRepository(client(async command => {
+      if (command instanceof GetCommand) return { Item: { data: { status: 'APPROVED', participantId: 'player', secretHash: hashToken('secret') } } };
+      throw { name: 'TransactionCanceledException', CancellationReasons: Array.from({length:4}, (_,i) => ({ Code: i === index ? reason : 'None' })) };
+    }), 'table', () => at);
+    await assert.rejects(repo.exchangeJoin('week','join','secret','token',{ contestId:'week',participantId:'player',expiresAt:at.getTime()+1000 }), (e: unknown) => e instanceof RepositoryError && e.code === code);
   }
 });

@@ -13,7 +13,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test dist/apps/api/src/index.test.js dist/packages/domain/src/index.test.js dist/packages/domain/src/card.test.js dist/apps/api/src/service.test.js dist/packages/persistence/src/dynamo.test.js",
-    "dev:api": "npm run build && node --env-file=.env dist/apps/api/src/local.js"
+    "dev:api": "npm run build && node --env-file=.env dist/apps/api/src/local.js",
+    "test:integration": "npm run build && node --test dist/packages/persistence/src/dynamo.integration.test.js"
   },
   "devDependencies": {
     "typescript": "~5.9.3",

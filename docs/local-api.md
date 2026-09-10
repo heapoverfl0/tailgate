@@ -1,6 +1,6 @@
 # Durable local API milestone
 
-The local server now uses createService with a FileStore. No external dependencies added. The production Lambda entry remains the original health/demo scaffold until a DynamoDB adapter is implemented; do not deploy file storage or an in-memory service as a durable backend.
+The local server uses createService with StoreRepository wrapping FileStore. Lambda uses the same service with DynamoContestRepository. No external dependencies were added for this integration. See the DynamoDB milestone for cloud configuration and validation limits; file storage remains development-only.
 
 ## Start
 
@@ -35,10 +35,10 @@ Transactions serialize inside one server, clone state, validate/mutate, write a 
 
 Session/request tokens are random; only their hashes persist. Commissioner cookies use HMAC, expiry and a secret-keyed credential version so password rotation invalidates them without exposing a password hash. Sessions last 30 days. Approval never reveals a participant token to the commissioner. Replaying an exchanged request only succeeds with that participant's existing cookie and never issues another token. If the original exchange response is lost before the cookie arrives, recovery remains manual; automated reauthorization is deferred.
 
-The file includes private cards and audit snapshots; keep it local and backed up appropriately. Audit records are whole-card before/after snapshots at each accepted mutation. DynamoDB must map changes into the spec's separate per-slot history partition and atomic card/version/lock operations. Persistent Player profiles remain next-stage work; current participant entries carry player IDs only.
+The file includes private cards and audit snapshots; keep it local and backed up appropriately. Audit records are whole-card before/after snapshots at each accepted mutation. DynamoDB maps changes into separate per-slot history partitions and atomic card/version/lock operations. DynamoDB approval creates persistent Player profiles; the local file adapter carries player IDs in participant entries only.
 
 ## Limits and next work
 
 The server limits request bodies to 128 KiB, pending join requests to 100 per contest, and commissioner login attempts to 10 per minute per process. Distributed rate limiting, session revocation/recovery, commissioner-assisted edits, explicit lock/Reveal state transitions and AppSync invalidations are not implemented. Pending joins become unavailable at lock. This slice validates pregame privacy; it does not implement public Reveal/live views.
 
-Automated tests exercise login/join/approve/exchange/save/Submit, stale and concurrent writes, foreign sessions, privacy, lock-time rejection, failed persistence and restart recovery. The service tests run directly against the request router and file adapter; full browser flows and AWS deployment tests remain later work. A real HTTP smoke test also passed: health 200, malformed JSON 400, and login 200 with an HttpOnly cookie. The build and all 39 automated tests pass.
+Automated tests exercise login/join/approve/exchange/save/Submit, stale and concurrent writes, foreign sessions, privacy, lock-time rejection, failed persistence and restart recovery. The service tests run directly against the request router and file adapter; full browser flows and AWS deployment tests remain later work. A real HTTP smoke test also passed: health 200, malformed JSON 400, and login 200 with an HttpOnly cookie. The current build and all 56 automated tests pass. Lambda request parsing/cookies and concurrent approval/session exchange are also covered. Actual DynamoDB expression-engine validation remains pending.

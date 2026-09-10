@@ -1,9 +1,10 @@
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
 import { FileStore } from '../../../packages/persistence/src/store.js';
+import { StoreRepository } from '../../../packages/persistence/src/repository.js';
 import { createService } from './service.js';
 const port = Number(process.env.PORT ?? 3001);
-const api = createService(await FileStore.open(resolve(process.env.TAILGATE_DATA_FILE ?? '.local/tailgate.json')), {
+const api = createService(new StoreRepository(await FileStore.open(resolve(process.env.TAILGATE_DATA_FILE ?? '.local/tailgate.json'))), {
   origin: process.env.APP_ORIGIN ?? `http://127.0.0.1:${port}`,
   password: process.env.COMMISSIONER_PASSWORD ?? '', signingSecret: process.env.SESSION_SIGNING_SECRET ?? '', secureCookies: false,
 });

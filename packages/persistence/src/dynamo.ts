@@ -1,14 +1,16 @@
+import { RepositoryError, assertOpen, verifyJoinSecret, type Repository, type CardWrite } from './repository.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, QueryCommand, TransactWriteCommand, DeleteCommand,
   type TransactWriteCommandInput } from '@aws-sdk/lib-dynamodb';
 import { freezeConfiguration, prepareCardSave, type Contest, type ContestConfiguration, type ContestParticipant, type PickCard, type Selection } from '../../domain/src/index.js';
-import type { StoredContest, ParticipantSession } from './store.js';
+import type { StoredContest, ParticipantSession, JoinRequest } from './store.js';
 
 export interface Key { PK: string; SK: string }
 const part = (id: string) => { if (!id || id.length > 200 || id.includes('#')) throw new Error('Invalid key identifier'); return id; };
 export const keys = {
   contest: (id: string): Key => ({ PK: `CONTEST#${part(id)}`, SK: 'META' }),
+  join: (id: string, requestId: string): Key => ({ PK: `CONTEST#${part(id)}`, SK: `JOIN#${part(requestId)}` }),
   participant: (id: string, participant: string): Key => ({ PK: `CONTEST#${part(id)}`, SK: `PARTICIPANT#${part(participant)}` }),
   pick: (id: string, participant: string, slot: string): Key => ({ PK: `CONTEST#${part(id)}`, SK: `PICK#${part(participant)}#${part(slot)}` }),
   history: (id: string, participant: string, slot: string, at: string, revision: string): Key => ({ PK: `PICKHISTORY#${part(id)}#${part(participant)}`, SK: `${part(at)}#${part(slot)}#${part(revision)}` }),
@@ -16,16 +18,14 @@ export const keys = {
 };
 interface Item extends Key { data: any; [key: string]: any }
 type Action = NonNullable<TransactWriteCommandInput['TransactItems']>[number];
-export class RepositoryError extends Error {
-  constructor(readonly code: string, readonly canonical?: unknown) { super(code); }
-}
+export { RepositoryError } from './repository.js';
 const own = <T>(map: Record<string, T>, key: string): T | undefined => Object.hasOwn(map, key) ? map[key] : undefined;
 export function encodeContest(contest: Contest, config: ContestConfiguration): Item[] {
   freezeConfiguration(config);
   if (config.contestId !== contest.id || contest.phase !== 'PREGAME' || contest.version !== 1 || contest.lockedAt || !Number.isFinite(Date.parse(contest.lockAt))) throw new Error('Invalid new contest');
   const PK = keys.contest(contest.id).PK;
   return [
-    { ...keys.contest(contest.id), data: { ...contest, lockAt: new Date(contest.lockAt).toISOString() }, lockAtMs: Date.parse(contest.lockAt), mainEventGameId: config.mainEventGameId },
+    { ...keys.contest(contest.id), data: { ...contest, lockAt: new Date(contest.lockAt).toISOString() }, lockAtMs: Date.parse(contest.lockAt), mainEventGameId: config.mainEventGameId, pendingJoins: 0 },
     ...config.games.map(data => ({ PK, SK: `GAME#${part(data.id)}`, data })),
     ...config.propositions.map(data => ({ PK, SK: `PROP#${part(data.id)}`, data })),
     ...config.slots.map(data => ({ PK, SK: `SLOT#${part(data.id)}`, data })),
@@ -69,7 +69,7 @@ function guardTransaction(items: Action[]): void {
     if (unique.has(id)) throw new Error('Duplicate transaction target'); unique.add(id);
   }
 }
-export interface CardWrite { contestId: string; participantId: string; expectedCardRevision: number; card?: unknown; submit?: boolean }
+export type { CardWrite } from './repository.js';
 export function buildCardTransaction(table: string, snapshot: StoredContest, input: CardWrite, at: Date): Action[] {
   const p = own(snapshot.participants, input.participantId);
   if (!p || input.contestId !== snapshot.contest.id) throw new RepositoryError('FORBIDDEN');
@@ -98,7 +98,7 @@ export function buildCardTransaction(table: string, snapshot: StoredContest, inp
   guardTransaction(actions); return actions;
 }
 function sameSelection(a?: Selection, b?: Selection): boolean { return a?.slotId === b?.slotId && a?.choiceId === b?.choiceId && a?.confidence === b?.confidence; }
-export class DynamoContestRepository {
+export class DynamoContestRepository implements Repository {
   constructor(private readonly client: Pick<DynamoDBDocumentClient, 'send'>, private readonly table: string, private readonly now: () => Date = () => new Date()) {
     if (!table) throw new Error('DynamoDB table required');
   }
@@ -110,7 +110,12 @@ export class DynamoContestRepository {
     const items = encodeContest(contest, config);
     const actions = items.map(Item => ({ Put: { TableName: this.table, Item, ConditionExpression: 'attribute_not_exists(PK)' } }));
     guardTransaction(actions);
-    await this.client.send(new TransactWriteCommand({ TransactItems: actions, ClientRequestToken: randomUUID() }));
+    try { await this.client.send(new TransactWriteCommand({ TransactItems: actions, ClientRequestToken: randomUUID() })); }
+    catch (error) {
+      const e = error as { name?: string; CancellationReasons?: { Code?: string }[] };
+      if (e.name === 'TransactionCanceledException' && e.CancellationReasons?.some(r => r.Code === 'ConditionalCheckFailed')) throw new RepositoryError('CONTEST_EXISTS');
+      throw error;
+    }
   }
   async getSnapshot(id: string): Promise<StoredContest> {
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -160,12 +165,79 @@ export class DynamoContestRepository {
     }
     return this.getSnapshot(input.contestId);
   }
+  async listJoins(id: string): Promise<JoinRequest[]> {
+    if (!await this.get(keys.contest(id))) throw new RepositoryError('NOT_FOUND');
+    const joins: JoinRequest[] = []; let cursor: Record<string, any> | undefined;
+    do {
+      const page = await this.client.send(new QueryCommand({ TableName: this.table, KeyConditionExpression: 'PK = :pk AND begins_with(SK, :prefix)', ExpressionAttributeValues: { ':pk': keys.contest(id).PK, ':prefix': 'JOIN#' }, ConsistentRead: true, ...(cursor ? { ExclusiveStartKey: cursor } : {}) }));
+      joins.push(...(page.Items ?? []).map(i => i.data as JoinRequest)); cursor = page.LastEvaluatedKey;
+    } while (cursor && Object.keys(cursor).length);
+    return joins;
+  }
+  async getJoin(id: string, requestId: string): Promise<JoinRequest> {
+    const item = await this.get(keys.join(id, requestId));
+    if (!item) throw new RepositoryError('NOT_FOUND'); return item.data;
+  }
+  private async joinWrite(actions: Action[], metaFailure = 'LOCKED'): Promise<void> {
+    guardTransaction(actions);
+    try { await this.client.send(new TransactWriteCommand({ ClientRequestToken: randomUUID(), TransactItems: actions })); }
+    catch (error) {
+      const e = error as { name?: string; CancellationReasons?: { Code?: string }[] };
+      if (e.name !== 'TransactionCanceledException') throw error;
+      if (e.CancellationReasons?.[0]?.Code === 'ConditionalCheckFailed') throw new RepositoryError(metaFailure);
+      if (e.CancellationReasons?.[1]?.Code === 'ConditionalCheckFailed') throw new RepositoryError('JOIN_ALREADY_HANDLED');
+      if (e.CancellationReasons?.[2]?.Code === 'ConditionalCheckFailed') throw new RepositoryError('FORBIDDEN');
+      throw new RepositoryError('TRANSACTION_RETRY_REQUIRED');
+    }
+  }
+  async createJoin(request: JoinRequest): Promise<void> {
+    const meta = protect(this.table, keys.contest(request.contestId), this.now().getTime());
+    const update = meta.Update!;
+    update.UpdateExpression += ', #pending = if_not_exists(#pending, :zero) + :one';
+    update.ConditionExpression += ' AND (attribute_not_exists(#pending) OR #pending < :limit)';
+    update.ExpressionAttributeNames!['#pending'] = 'pendingJoins';
+    Object.assign(update.ExpressionAttributeValues!, { ':zero': 0, ':limit': 100 });
+    try { await this.joinWrite([meta, { Put: { TableName: this.table, Item: { ...keys.join(request.contestId, request.id), data: request }, ConditionExpression: 'attribute_not_exists(PK)' } }], 'JOIN_LIMIT_OR_LOCK'); }
+    catch (e) {
+      if (e instanceof RepositoryError && e.code === 'JOIN_LIMIT_OR_LOCK') {
+        const c = await this.getSnapshot(request.contestId); assertOpen(c, this.now()); throw new RepositoryError('TOO_MANY_REQUESTS');
+      }
+      throw e;
+    }
+  }
+  async decideJoin(id: string, requestId: string, p?: ContestParticipant): Promise<void> {
+    const request = await this.getJoin(id, requestId);
+    if (request.status !== 'PENDING') throw new RepositoryError('JOIN_ALREADY_HANDLED');
+    if (p && (p.contestId !== id || p.displayName !== request.name || p.status !== 'ACTIVE' || p.cardRevision !== 0 || p.submissionStatus !== 'DRAFT')) throw new RepositoryError('FORBIDDEN');
+    const meta = protect(this.table, keys.contest(id), this.now().getTime());
+    meta.Update!.UpdateExpression += ', #pending = #pending - :one';
+    meta.Update!.ExpressionAttributeNames!['#pending'] = 'pendingJoins';
+    const actions: Action[] = [meta, { Put: { TableName: this.table, Item: { ...keys.join(id, requestId), data: { ...request, status: p ? 'APPROVED' : 'DENIED', ...(p ? { participantId: p.participantId } : {}) } }, ConditionExpression: '#d.#s = :pending', ExpressionAttributeNames: { '#d': 'data', '#s': 'status' }, ExpressionAttributeValues: { ':pending': 'PENDING' } } }];
+    if (p) actions.push(
+      { Put: { TableName: this.table, Item: { ...keys.participant(id, p.participantId), data: p }, ConditionExpression: 'attribute_not_exists(PK)' } },
+      { Put: { TableName: this.table, Item: { PK: `PLAYER#${part(p.playerId)}`, SK: 'PROFILE', data: { id: p.playerId, name: p.displayName } }, ConditionExpression: 'attribute_not_exists(PK)' } },
+    );
+    await this.joinWrite(actions);
+  }
+  async exchangeJoin(id: string, requestId: string, secret: string, token: string, session: ParticipantSession): Promise<void> {
+    const request = await this.getJoin(id, requestId); verifyJoinSecret(secret, request.secretHash);
+    if (request.status !== 'APPROVED') throw new RepositoryError('JOIN_ALREADY_HANDLED');
+    if (session.contestId !== id || session.participantId !== request.participantId || session.expiresAt <= this.now().getTime()) throw new RepositoryError('FORBIDDEN');
+    await this.joinWrite([
+      protect(this.table, keys.contest(id), this.now().getTime()),
+      { Put: { TableName: this.table, Item: { ...keys.join(id, requestId), data: { ...request, status: 'EXCHANGED' } }, ConditionExpression: '#d.#s = :approved AND #d.#hash = :hash AND #d.#p = :p', ExpressionAttributeNames: { '#d': 'data', '#s': 'status', '#hash': 'secretHash', '#p': 'participantId' }, ExpressionAttributeValues: { ':approved': 'APPROVED', ':hash': request.secretHash, ':p': session.participantId } } },
+      { ConditionCheck: { TableName: this.table, Key: keys.participant(id, session.participantId), ConditionExpression: '#d.#s = :active', ExpressionAttributeNames: { '#d': 'data', '#s': 'status' }, ExpressionAttributeValues: { ':active': 'ACTIVE' } } },
+      { Put: { TableName: this.table, Item: { ...keys.session(token), data: session, expiresAt: Math.floor(session.expiresAt / 1000) }, ConditionExpression: 'attribute_not_exists(PK)' } },
+    ]);
+  }
   async resolveSession(rawToken: string, contestId: string): Promise<ParticipantSession | undefined> {
     if (!rawToken) return undefined;
     const item = await this.get(keys.session(rawToken)); const session = item?.data as ParticipantSession | undefined;
-    if (!session || session.expiresAt <= this.now().getTime() || session.contestId !== contestId) return undefined;
+    if (!session || session.expiresAt <= this.now().getTime()) return undefined;
+    if (session.contestId !== contestId) throw new RepositoryError('FORBIDDEN');
     const p = await this.get(keys.participant(contestId, session.participantId));
-    return p?.data.status === 'ACTIVE' ? session : undefined;
+    if (p?.data.status !== 'ACTIVE') throw new RepositoryError('FORBIDDEN');
+    return session;
   }
   async revokeSession(rawToken: string): Promise<void> {
     await this.client.send(new DeleteCommand({ TableName: this.table, Key: keys.session(rawToken) }));

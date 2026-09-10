@@ -1,3 +1,4 @@
+import { StoreRepository } from '../../../packages/persistence/src/repository.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
@@ -12,7 +13,7 @@ const value = (r: ApiResponse) => r.body as any;
 const cookie = (r: ApiResponse) => r.cookies?.[0]?.split(';')[0] ?? '';
 async function setup(store = new MemoryStore()) {
   let time = new Date('2026-09-12T15:00:00Z');
-  const api = createService(store, { ...settings, now: () => time });
+  const api = createService(new StoreRepository(store, () => time), { ...settings, now: () => time });
   const call = (method: string, path: string, body?: unknown, session = '') => api({ method, path, body, headers: { origin, cookie: session } });
   const admin = cookie(await call('POST', '/api/commissioner/login', { password: settings.password }));
   const { c, card } = fixture();
@@ -91,7 +92,7 @@ test('file repository survives restart with participant sessions, cards and revi
   try {
     const path = join(directory, 'state.json'); const s = await setup(await FileStore.open(path)); const { session } = await s.joinPlayer();
     await s.call('PUT', '/api/contests/week/me/pick-card', { ...s.card, expectedCardRevision: 0 }, session);
-    const reloaded = await FileStore.open(path); const api = createService(reloaded, { ...settings, now: () => new Date('2026-09-12T15:30:00Z') });
+    const reloaded = await FileStore.open(path); const api = createService(new StoreRepository(reloaded), { ...settings, now: () => new Date('2026-09-12T15:30:00Z') });
     const result = await api({ method: 'GET', path: '/api/contests/week/me/pick-card', headers: { cookie: session } });
     assert.equal(result.statusCode, 200); assert.equal(value(result).cardRevision, 1);
     assert.equal((await reloaded.read()).history.length, 1);
@@ -120,4 +121,27 @@ test('configuration rejects unknown fields and cross-contest participant session
   assert.equal((await s.call('GET', '/api/contests/other/me/pick-card', undefined, session)).statusCode, 403);
   const response = await s.call('POST', '/api/contests', { contest: { id: 'other', name: 'Other', timezone: 'UTC', lockAt: '2026-09-12T18:00:00Z' }, configuration: { ...s.c, hiddenPicks: [] } }, s.admin);
   assert.equal(response.statusCode, 422);
+});
+
+test('concurrent approval and exchange each commit once without issuing two sessions', async () => {
+  const s = await setup();
+  const request = value(await s.call('POST', '/api/contests/week/join-requests', { displayName: 'Racing' }));
+  const path = `/api/contests/week/join-requests/${request.requestId}`;
+  const approvals = await Promise.all([1,2].map(() => s.call('POST', `${path}/approve`, { attendance: 'ON_SITE' }, s.admin)));
+  assert.deepEqual(approvals.map(r => r.statusCode).sort(), [200,409]);
+  const exchanges = await Promise.all([1,2].map(() => s.call('POST', path, { requestSecret: request.requestSecret })));
+  assert.equal(exchanges.filter(r => r.cookies?.length).length, 1);
+  assert.ok(exchanges.every(r => [200,401,409].includes(r.statusCode)));
+  const persisted = await s.store.read();
+  assert.equal(Object.keys(persisted.contests.week!.participants).length, 1);
+  assert.equal(Object.keys(persisted.sessions).length, 1);
+});
+test('pending request cap and lock prevent approval and session issuance', async () => {
+  const s = await setup();
+  const request = value(await s.call('POST', '/api/contests/week/join-requests', { displayName: 'Waiting' }));
+  for (let i = 1; i < 100; i++) assert.equal((await s.call('POST', '/api/contests/week/join-requests', { displayName: 'Waiting' })).statusCode, 201);
+  assert.equal((await s.call('POST', '/api/contests/week/join-requests', { displayName: 'Over limit' })).statusCode, 429);
+  s.advance();
+  assert.equal((await s.call('POST', `/api/contests/week/join-requests/${request.requestId}/approve`, { attendance: 'REMOTE' }, s.admin)).statusCode, 409);
+  assert.equal((await s.call('POST', `/api/contests/week/join-requests/${request.requestId}`, { requestSecret: request.requestSecret })).statusCode, 409);
 });
