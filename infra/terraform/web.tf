@@ -127,7 +127,7 @@ resource "aws_s3_object" "web" {
   source                 = "${local.web_directory}/${each.value}"
   source_hash            = filemd5("${local.web_directory}/${each.value}")
   server_side_encryption = "AES256"
-  content_type           = lookup({ html = "text/html; charset=utf-8", js = "text/javascript; charset=utf-8", css = "text/css; charset=utf-8", svg = "image/svg+xml" }, reverse(split(".", each.value))[0], "application/octet-stream")
+  content_type           = lookup({ html = "text/html; charset=utf-8", js = "text/javascript; charset=utf-8", css = "text/css; charset=utf-8", svg = "image/svg+xml", png = "image/png" }, reverse(split(".", each.value))[0], "application/octet-stream")
   cache_control          = "no-cache"
 }
 output "web_url" {

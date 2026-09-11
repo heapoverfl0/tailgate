@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import contestQr from './contest-qr.json';
 import type { ContestConfiguration, PickCard, PickChoice } from '../../../packages/domain/src/index';
 
 type Card = PickCard & { cardRevision: number; submissionStatus: string; validation: { complete: boolean } };
@@ -96,12 +97,18 @@ export function Contest({ id }: { id: string }) {
   const change = (next: PickCard) => { setDraft(next); setDirty(true); setError(''); setMessage('Unsaved changes'); };
   const action = async (work: () => Promise<void>) => { setBusy(true); setError(''); try { await work(); } catch (e) { setError(describe(e)); } finally { setBusy(false); } };
   if (!view) return <main><a href="/">← All contests</a><h1>{error ? 'Couldn’t open this contest.' : 'Opening your contest…'}</h1>{error && <p role="alert" className="error">{error}</p>}<button onClick={()=>location.reload()}>Try again</button></main>;
+  const joinUrl = new URL(`/?contest=${encodeURIComponent(id)}`, location.origin).href;
+  const qrAvailable = (contestQr as Record<string,string>)[id] === joinUrl;
   const confidenceSlots = view.configuration.slots.filter(s => s.category === 'CONFIDENCE');
   const confidenceOwner = (n: number) => confidenceSlots.find(s => draft.picks.some(p => p.slotId === s.id && p.confidence === n));
   const availableConfidence = [1,2,3,4,5,6].filter(n => !confidenceOwner(n));
   const minutes = Math.max(0, Math.ceil((Date.parse(view.contest.lockAt) - now) / 60000));
   return <main className={display ? 'display' : ''}><div className="eyebrow">{locked ? 'PICKS CLOSED' : `LOCKS IN ${Math.floor(minutes/60)}H ${minutes%60}M`} · {id}</div><h1>{view.contest.name}</h1><p className="intro">{locked ? 'Your card is frozen. Picks remain private until the reveal.' : 'Your picks stay private. Submit when complete; edit until lock.'}</p>
     <nav><a href={`/?contest=${encodeURIComponent(id)}${display ? '' : '&display=1'}`}>{display ? 'Participant view' : 'Shared display ↗'}</a></nav>
+    {display && <section className="join-display" aria-label="Join this contest">
+      {qrAvailable && <a href={joinUrl} aria-label="Open this contest to join"><img src={`/qr/${encodeURIComponent(id)}.png`} alt={`QR code to join contest ${id}`} width="300" height="300" /></a>}
+      <div><h2>{qrAvailable ? 'Scan to join' : 'Join this contest'}</h2><p>{qrAvailable ? 'Open your camera, scan the code, and request to join.' : 'Open the link below and request to join.'}</p><p>Contest code: <strong>{id}</strong></p><a href={joinUrl}>{joinUrl}</a></div>
+    </section>}
     {error && <p className="error" role="alert">{error}</p>}{message && <p className="notice" role="status">{message}</p>}
     <section className="players"><h2>The crew <small>{view.participants.length} playing</small></h2>{view.participants.length === 0 ? <p>No players yet. Be the first to make a questionable prediction.</p> : view.participants.map(p=><article key={p.participantId}><strong>{p.displayName}</strong><span>{p.attendance === 'REMOTE' ? 'Remote' : 'On site'}</span><b>{p.submissionStatus === 'SUBMITTED' ? 'Submitted' : `${p.completedSelections} / 15 picks`}</b></article>)}</section>
     {!display && !card && <section className="entry"><h2>Get in the game</h2>{join ? <p role="status">Waiting for commissioner approval. Keep this tab open.</p> : locked ? <p>This contest is closed to new players.</p> : <form onSubmit={e=>{e.preventDefault(); void action(async()=>{const r=await api<{requestId:string;requestSecret:string}>(`${base}/join-requests`,'POST',{displayName:name});setJoin(r);try{sessionStorage.setItem(`tailgate-join-${id}`,JSON.stringify(r));}catch{}});}}><label htmlFor="name">Your name</label><div className="inline"><input id="name" required maxLength={80} value={name} onChange={e=>setName(e.target.value)}/><button disabled={busy}>Request to join</button></div></form>}</section>}
