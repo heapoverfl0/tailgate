@@ -18,7 +18,7 @@ From the project root:
 
 The cloud HTTPS smoke passed health, login/rejection, Origin rejection, approval, secure session cookies, save, conflict, Submit and own/public/commissioner/other-participant pick privacy. It removed 77 synthetic records. Browser testing of the local frontend additionally exercised the full join/approval/card flow, reload persistence and a 390px mobile layout without horizontal overflow. See the [web app notes](../apps/web/README.md) for boundaries.
 
-No real contest has been seeded. Contest creation remains available through the authenticated API; UI curation, team display names, real slate selection, Reveal, Live, AppSync, CFBD and poller scheduling are still outstanding. M0 is not complete.
+The real September 12, 2026 contest is seeded and publicly readable: [contest setup and sources](../contests/README.md). Contest creation remains available through the authenticated API; UI curation, a separate team display-name catalog, Reveal, Live, AppSync, CFBD and poller scheduling are still outstanding. M0 is not complete.
 
 Reference: [AWS CloudFront private S3 access](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html).
 
