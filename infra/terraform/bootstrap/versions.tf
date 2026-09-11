@@ -6,6 +6,6 @@ terraform {
       version = "6.64.0"
     }
   }
-  # Intentionally local until this stack creates the remote state bucket.
-  backend "local" {}
+  # Created with local state; now migrated to its own key in the state bucket.
+  backend "s3" {}
 }

@@ -29,4 +29,4 @@ M3: CFBD normalization, overrides, realtime Live views and Live Director.
 M4: Main Event resolution and correlated contest outcome engine.
 M5: Final, historical results from the first completed contest, presentation polish. Expanded career analytics can follow.
 
-Dependency review and installation succeeded September 9, 2026. Cloud deployment/integration checks remain pending. No AWS resources have been created.
+Dependency review and installation succeeded September 9, 2026. The private Terraform state bucket and DynamoDB table are deployed in personal account 965984382163 (us-east-2). Bootstrap state is migrated to S3. API cloud deployment/integration checks remain pending.

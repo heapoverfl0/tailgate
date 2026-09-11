@@ -35,4 +35,4 @@ The local API listens on http://127.0.0.1:3001 and saves state in the ignored `.
 - `packages/game-data`: provider boundary
 - `infra/terraform`: deployment planning notes
 
-This is a tested starting foundation, not the completed M0 deployment. The durable local API supports login, contest creation, join/approval and card save/Submit. The DynamoDB API adapter and Lambda wiring are implemented. React UI, realtime, infrastructure and database integration validation remain pending. No cloud resources have been created.
+This is a tested starting foundation, not the completed M0 deployment. The durable local API supports login, contest creation, join/approval and card save/Submit. The DynamoDB API adapter and Lambda wiring are implemented. Local DynamoDB integration validation passes. The private Terraform state bucket and DynamoDB table are deployed in the personal AWS account; see [infrastructure status](infra/terraform/README.md). React UI, realtime and API cloud deployment remain pending.

@@ -11,13 +11,13 @@ These configurations explicitly select profile `tailgate-personal` from:
 
 Those files now exist with private permissions. Profile `tailgate-login` holds browser-session configuration; `tailgate-personal` uses AWS CLI credential_process to provide refreshed temporary credentials to Terraform. Login cache is separately located at `~/.config/tailgate/aws/login-cache`. Never use the work SSO profiles in `~/.aws`, change shared defaults, or copy work credentials. Establish personal short-lived authentication separately, then verify its account ID before any account-backed plan. Do not create long-lived keys or paste credentials into chat to satisfy this scaffold.
 
-When running credentialed Terraform, use a dedicated child-process environment that removes inherited AWS credentials, web-identity/container credential settings, endpoint overrides, and Terraform CLI argument overrides. Set the dedicated file paths/profile explicitly for the process; keep metadata credential fallback disabled. The provider's account allowlist is defense in depth, not a substitute for isolating credential discovery. Account-backed commands are pending the personal authentication setup.
+When running credentialed Terraform, use a dedicated child-process environment that removes inherited AWS credentials, web-identity/container credential settings, endpoint overrides, and Terraform CLI argument overrides. Set the dedicated file paths/profile explicitly for the process; keep metadata credential fallback disabled. The provider's account allowlist is defense in depth, not a substitute for isolating credential discovery. Personal authentication has been verified against account 965984382163.
 
 ## Stacks
 
 `bootstrap/` creates a private, versioned, encrypted S3 bucket for state. It blocks public access, disables ACL ownership sharing, denies plaintext transport and prevents accidental destruction. It initially uses local state; keep that state private, backed up and outside Git. Do not delete it after creating the bucket. A subsequent migration can put bootstrap state into the bucket under a separate key once the bucket exists.
 
-The main stack creates the on-demand DynamoDB table with PK/SK keys, application-compatible TTL, point-in-time recovery, encryption and deletion protection. Terraform also prevents accidental destruction. Backups and storage incur charges; no resources have been provisioned yet.
+The main stack creates the on-demand DynamoDB table with PK/SK keys, application-compatible TTL, point-in-time recovery, encryption and deletion protection. Terraform also prevents accidental destruction. Backups and storage incur charges. The table is deployed.
 
 Remote state uses S3 lockfiles (`use_lockfile`), so a separate DynamoDB lock table is unnecessary. Copy `backend.hcl.example` to ignored `backend.hcl`, replacing `HOME` with an absolute home directory path. Do not put secrets in backend arguments or files.
 
@@ -29,7 +29,7 @@ Remote state uses S3 lockfiles (`use_lockfile`), so a separate DynamoDB lock tab
 4. Configure isolated personal authentication, verify account **965984382163**, then create/review a bootstrap plan. Apply only after the concrete changes and costs have been reviewed.
 5. Initialize the main stack using `terraform init -backend-config=backend.hcl`, then create/review its plan before apply.
 
-The local Terraform executable is 1.11.4; AWS provider metadata was pinned to 6.64.0. Formatting and provider-schema validation passed for both stacks; provider lockfiles were generated. AWS credential validation, planning and deployment remain pending. No work profile or AWS API was accessed while writing these files.
+The local Terraform executable is 1.11.4; AWS provider metadata was pinned to 6.64.0. Formatting and provider-schema validation passed for both stacks; provider lockfiles were generated. AWS credential validation, planning and foundation deployment have completed. No work profile or AWS API was accessed while writing these files.
 
 Next infrastructure slice: Lambda ZIP packaging, commissioner secret handling, least-privilege API role, Lambda, API Gateway and CloudWatch logs. Frontend hosting, realtime and the poller schedule follow their implementation. Terraform must coexist with AWS-managed project policies and roles; do not modify AWS-managed roles or enable account-wide advanced features as a workaround without reviewing the need.
 
@@ -40,4 +40,6 @@ References: [AWS provider authentication](https://registry.terraform.io/provider
 
 After explicit user approval, applied the saved bootstrap plan in verified personal account 965984382163: six additions, zero changes, zero deletions. Bucket `tailgate-tfstate-965984382163-us-east-2` now exists. Owner-checked AWS reads verified us-east-2, enabled versioning, AES256 server-side encryption, all four public-access blocks, BucketOwnerEnforced ownership and a policy denying non-TLS requests.
 
-Bootstrap state remains in the ignored local `bootstrap/terraform.tfstate`, created with a private process umask. Preserve this file; it has not yet been migrated to remote state. The main stack has not been deployed. Next: configure the remote backend, preserve/migrate bootstrap state, and prepare the DynamoDB plan for review.
+Bootstrap state has been migrated to `tailgate/bootstrap.tfstate` in the private state bucket. A private, ignored backup is preserved at `.local/bootstrap-backup/before-s3-migration.tfstate`. A subsequent bootstrap plan reported no changes.
+
+The main stack uses `tailgate/foundation.tfstate` in the same bucket. The reviewed DynamoDB plan was applied: one addition, zero changes and zero deletions. Table `tailgate` is deployed in the verified personal account and region, with on-demand billing, deletion protection, point-in-time recovery, encryption and `expiresAt` TTL. API Lambda and API Gateway are still pending.
