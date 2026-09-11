@@ -1,0 +1,12 @@
+bucket                   = "tailgate-tfstate-965984382163-us-east-2"
+key                      = "tailgate/foundation.tfstate"
+region                   = "us-east-2"
+encrypt                  = true
+use_lockfile             = true
+allowed_account_ids      = ["965984382163"]
+profile                  = "tailgate-personal"
+# Replace HOME below with the absolute path to your home directory.
+# Backend config files do not evaluate Terraform functions or expand shell variables.
+shared_config_files      = ["HOME/.config/tailgate/aws/config"]
+shared_credentials_files = ["HOME/.config/tailgate/aws/credentials"]
+skip_metadata_api_check  = true

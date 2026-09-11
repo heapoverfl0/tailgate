@@ -12,3 +12,6 @@ dist/
 crash.log
 
 .local/
+backend.hcl
+*.tfplan
+*.tfplan.json

@@ -56,3 +56,7 @@ The test passed against the pinned DynamoDB Local 3.3.1 image. Docker did not pu
 All temporary containers/networks from setup attempts were removed; the successful test's container and host relay were also removed. The pinned image remains cached for repeat testing. Docker Desktop remains running; no shared Docker defaults, AWS profiles or Git authentication settings were changed.
 
 The checked-in `scripts/test-dynamodb-local.py` reproduces this isolation using an already cached image and installed JDK/Python/Docker. It does not pull images. The underlying dependency findings and unidentified-library coverage gaps remain applicable on future runs.
+
+## Terraform provider selection — September 11, 2026
+
+Existing Terraform CLI 1.11.4 was used only for local formatting; no CLI installation occurred. Registry metadata identified hashicorp/aws 6.64.0, now pinned in the initial foundation stacks. Guide returned unknown coordinates for `pkg:generic/hashicorp/terraform-provider-aws@6.64.0`. This is an assessment coverage gap, not a passing security review. No provider binary was downloaded or executed. Provider and transitive review, provider-schema validation and lockfile generation remain pending before initialization.
