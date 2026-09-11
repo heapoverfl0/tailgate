@@ -1,5 +1,17 @@
 # September 12, 2026 contest
 
+## Revised contest — use this link
+
+[Open the revised contest](https://djhbbw57tyj22.cloudfront.net/?contest=sept12-2026-revised). Created and verified with zero participants and picks, following the user's authorization to start over. The original contest remains intact; enrollment must be requested again on this replacement.
+
+`sept12-2026-revised.json` replaces UCF–Pittsburgh with Alabama–Kentucky (3:30 p.m. Eastern), and Memphis–Boise State with App State–ECU (noon Eastern). All other games and the noon Eastern lock remain unchanged. Afternoon games may run into GT's kickoff; evening kickoffs outside the Main Event are excluded by user request.
+
+ATS uses Oklahoma -5.5, Alabama -10 and ECU -6.5. The replacement lines were supplied by the commissioner, not fetched as new live quotes. Upset Special retains Michigan, Arizona State and Oklahoma State plus No Upset; the removed games' candidates and odds are removed, with no invented replacement moneylines.
+
+Kickoff sources: [Kentucky game information](https://ukathletics.com/2026-football-media-center/) and [App State schedule](https://appstatesports.com/sports/football/schedule). Configuration validation passed; the creation response and public read verified seven games, fifteen slots, the lock timestamp and empty enrollment.
+
+## Original contest (superseded)
+
 [Open the contest](https://djhbbw57tyj22.cloudfront.net/?contest=sept12-2026). Code: `sept12-2026`.
 
 The user selected Saturday September 12 and explicitly set the lock to **12:00 p.m. Eastern**: `2026-09-12T16:00:00.000Z`, timezone `America/New_York`. Saves at or after this deadline are rejected by the API. No participants or picks were seeded.
