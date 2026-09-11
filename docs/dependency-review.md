@@ -60,3 +60,14 @@ The checked-in `scripts/test-dynamodb-local.py` reproduces this isolation using 
 ## Terraform provider selection — September 11, 2026
 
 Existing Terraform CLI 1.11.4 was used only for local formatting; no CLI installation occurred. Registry metadata identified hashicorp/aws 6.64.0, now pinned in the initial foundation stacks. Guide returned unknown coordinates for `pkg:generic/hashicorp/terraform-provider-aws@6.64.0`. This is an assessment coverage gap, not a passing security review. No provider binary was downloaded or executed. Provider and transitive review, provider-schema validation and lockfile generation remain pending before initialization.
+
+
+### Terraform and personal AWS CLI setup — September 11, 2026
+
+Guide also did not recognize `pkg:golang/github.com/hashicorp/terraform-provider-aws@v6.64.0` or `pkg:generic/amazon/aws-cli@2.36.42`. The coverage limitation was disclosed before download. These tooling distributions and their bundled dependencies have not received a complete vulnerability assessment; no passing transitive review is claimed.
+
+Terraform initialized both stacks with `-backend=false`, an empty temporary CLI configuration, inherited AWS/TF variables removed, and metadata fallback disabled. Terraform verified hashicorp/aws 6.64.0 as signed by HashiCorp. Both provider-schema validations passed. The generated `.terraform.lock.hcl` files retain the selected version and checksums. No AWS account operation was performed during validation.
+
+AWS CLI 2.36.42 was downloaded from `https://awscli.amazonaws.com/AWSCLIV2-2.36.42.pkg`. macOS pkgutil reported a trusted Developer ID Installer signature from AMZN Mobile LLC (94KV3E626L), a trusted timestamp, and Apple notarization. Extracted the payload without running its installer/postinstall scripts and placed it in `~/.local/share/tailgate/aws-cli/2.36.42`. Its version was verified. The shared Homebrew AWS CLI remains 2.19.3, with its symlink unchanged.
+
+A dedicated private config, empty credentials file, and login-cache directory were created under `~/.config/tailgate/aws`. Browser login was initiated with an allowlisted child-process environment. Work profiles in `~/.aws` were not read or modified. Login completion and personal account identity verification are separate pending checks; no deployment is authorized by this tooling validation.
