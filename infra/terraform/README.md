@@ -34,3 +34,10 @@ The local Terraform executable is 1.11.4; AWS provider metadata was pinned to 6.
 Next infrastructure slice: Lambda ZIP packaging, commissioner secret handling, least-privilege API role, Lambda, API Gateway and CloudWatch logs. Frontend hosting, realtime and the poller schedule follow their implementation. Terraform must coexist with AWS-managed project policies and roles; do not modify AWS-managed roles or enable account-wide advanced features as a workaround without reviewing the need.
 
 References: [AWS provider authentication](https://registry.terraform.io/providers/hashicorp/aws/latest/docs), [S3 state backend](https://developer.hashicorp.com/terraform/language/backend/s3), [AWS projects](https://docs.aws.amazon.com/accounts/latest/reference/sign-up-for-aws.html).
+
+
+## Bootstrap deployed — September 11, 2026
+
+After explicit user approval, applied the saved bootstrap plan in verified personal account 965984382163: six additions, zero changes, zero deletions. Bucket `tailgate-tfstate-965984382163-us-east-2` now exists. Owner-checked AWS reads verified us-east-2, enabled versioning, AES256 server-side encryption, all four public-access blocks, BucketOwnerEnforced ownership and a policy denying non-TLS requests.
+
+Bootstrap state remains in the ignored local `bootstrap/terraform.tfstate`, created with a private process umask. Preserve this file; it has not yet been migrated to remote state. The main stack has not been deployed. Next: configure the remote backend, preserve/migrate bootstrap state, and prepare the DynamoDB plan for review.
