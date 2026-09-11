@@ -1,0 +1,116 @@
+import { useEffect, useRef, useState } from 'react';
+import type { ContestConfiguration, PickCard, PickChoice } from '../../../packages/domain/src/index';
+
+type Card = PickCard & { cardRevision: number; submissionStatus: string; validation: { complete: boolean } };
+type View = { contest: { name: string; lockAt: string; phase: string; lockedAt?: string }; configuration: ContestConfiguration; participants: { participantId: string; displayName: string; attendance: string; submissionStatus: string; completedSelections: number }[] };
+class RequestError extends Error { constructor(public code: string, public details?: Card) { super(code.replaceAll('_', ' ').toLowerCase()); } }
+async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+  const response = await fetch(`/api${path}`, { method, credentials: 'same-origin', headers: { 'content-type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(20000) });
+  const data = await response.json();
+  if (!response.ok) throw new RequestError(data.error?.code ?? 'REQUEST_FAILED', data.error?.details);
+  return data;
+}
+const describe = (e: unknown) => e instanceof RequestError ? e.message : 'Connection failed. Please try again.';
+const categories = { CONFIDENCE: 'Confidence', ATS: 'Against the spread', UPSET_SPECIAL: 'Upset Special', MAIN_EVENT: 'Main Event' };
+
+function choiceLabel(choice: PickChoice, config: ContestConfiguration): string {
+  if (choice.kind === 'NO_UPSET') return 'No upset — guaranteed 1 point';
+  const parameters = config.propositions.find(p => p.id === choice.propositionId)?.parameters;
+  let label = choice.outcome.kind === 'TEAM' ? choice.outcome.teamId : choice.outcome.kind === 'TOTAL_SIDE' ? choice.outcome.side : choice.outcome.kind === 'SCORE_TYPE' ? choice.outcome.scoreType.replaceAll('_', ' ') : 'Tie';
+  if (parameters?.kind === 'AGAINST_SPREAD' && choice.outcome.kind === 'TEAM') {
+    const spread = choice.outcome.teamId === parameters.favoredTeamId ? parameters.spread : -parameters.spread;
+    label += ` ${spread > 0 ? '+' : ''}${spread}`;
+  }
+  if (parameters?.kind === 'GAME_TOTAL') label += ` ${parameters.total}`;
+  return label + (choice.points ? ` · ${choice.points} pts` : '');
+}
+
+export function Contest({ id }: { id: string }) {
+  const base = `/contests/${encodeURIComponent(id)}`;
+  const [view, setView] = useState<View>();
+  const [card, setCard] = useState<Card>();
+  const [draft, setDraft] = useState<PickCard>({ picks: [] });
+  const [dirty, setDirty] = useState(false);
+  const [score, setScore] = useState({home: '', away: ''});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [name, setName] = useState('');
+  const [join, setJoin] = useState<{ requestId: string; requestSecret: string }>();
+  const [admin, setAdmin] = useState(false);
+  const [password, setPassword] = useState('');
+  const [requests, setRequests] = useState<{ requestId: string; displayName: string }[]>([]);
+  const [now, setNow] = useState(Date.now());
+  const display = new URLSearchParams(location.search).get('display') === '1';
+  const saving = useRef(false);
+  const adopt = (next: Card) => { setCard(next); setDraft({ picks: next.picks, prediction: next.prediction }); setDirty(false); setScore({home: next.prediction ? String(next.prediction.home) : '', away: next.prediction ? String(next.prediction.away) : ''}); };
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try { const v = await api<View>(`${base}/pregame`); if (active) setView(v); }
+      catch (e) { if (active) setError(describe(e)); }
+    };
+    void load();
+    if (!display) {
+      void api<Card>(`${base}/me/pick-card`).then(c => { if (active) adopt(c); }).catch(e => { if (!(e instanceof RequestError && ['UNAUTHENTICATED','FORBIDDEN'].includes(e.code)) && active) setError(describe(e)); });
+      try { const stored = sessionStorage.getItem(`tailgate-join-${id}`); if (stored) setJoin(JSON.parse(stored)); } catch { /* Storage is optional. */ }
+    }
+    const timer = setInterval(load, 10000);
+    const clock = setInterval(() => setNow(Date.now()), 1000);
+    return () => { active = false; clearInterval(timer); clearInterval(clock); };
+  }, [base, display, id]);
+  useEffect(() => {
+    if (!join || card || display) return;
+    let active = true;
+    const poll = async () => {
+      try {
+        const result = await api<{status: string}>(`${base}/join-requests/${join.requestId}`, 'POST', { requestSecret: join.requestSecret });
+        if (!active) return;
+        if (result.status === 'APPROVED') {
+          adopt(await api<Card>(`${base}/me/pick-card`)); setJoin(undefined); setMessage('You’re in. Make your picks.');
+          try { sessionStorage.removeItem(`tailgate-join-${id}`); } catch { /* Optional storage. */ }
+        } else if (result.status === 'DENIED') { setJoin(undefined); setError('Your request was declined. Contact your commissioner.'); try { sessionStorage.removeItem(`tailgate-join-${id}`); } catch {} }
+      } catch (e) { if (active) setError(describe(e)); }
+    };
+    void poll(); const timer = setInterval(poll, 5000);
+    return () => { active = false; clearInterval(timer); };
+  }, [join, card, base, display, id]);
+  useEffect(() => {
+    if (!admin) return;
+    const load = () => api<{requests: {requestId: string; displayName: string}[]}>(`${base}/join-requests`).then(r=>setRequests(r.requests)).catch(e=>setError(describe(e)));
+    void load(); const timer = setInterval(load, 5000); return () => clearInterval(timer);
+  }, [admin, base]);
+  const locked = !!view && (view.contest.phase !== 'PREGAME' || !!view.contest.lockedAt || now >= Date.parse(view.contest.lockAt));
+  const partialScore = (score.home === '') !== (score.away === '');
+  const save = async () => {
+    if (!card || !dirty || locked || partialScore || saving.current) return;
+    saving.current = true; setBusy(true); setError('');
+    try { adopt(await api<Card>(`${base}/me/pick-card`, 'PUT', { ...draft, expectedCardRevision: card.cardRevision })); setMessage('All changes saved.'); }
+    catch (e) {
+      if (e instanceof RequestError && e.code === 'CARD_REVISION_CONFLICT' && e.details) { adopt(e.details); setError('Your card changed in another tab. The latest saved card is shown; review it before editing.'); }
+      else setError(describe(e));
+    } finally { saving.current = false; setBusy(false); }
+  };
+  useEffect(() => { if (!dirty || busy || error || partialScore) return; const timer = setTimeout(save, 800); return () => clearTimeout(timer); }, [draft, dirty, busy, error, locked, partialScore]);
+  useEffect(() => { const warn = (e: BeforeUnloadEvent) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } }; window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn); }, [dirty]);
+  const change = (next: PickCard) => { setDraft(next); setDirty(true); setError(''); setMessage('Unsaved changes'); };
+  const action = async (work: () => Promise<void>) => { setBusy(true); setError(''); try { await work(); } catch (e) { setError(describe(e)); } finally { setBusy(false); } };
+  if (!view) return <main><a href="/">← All contests</a><h1>{error ? 'Couldn’t open this contest.' : 'Opening your contest…'}</h1>{error && <p role="alert" className="error">{error}</p>}<button onClick={()=>location.reload()}>Try again</button></main>;
+  const minutes = Math.max(0, Math.ceil((Date.parse(view.contest.lockAt) - now) / 60000));
+  return <main className={display ? 'display' : ''}><div className="eyebrow">{locked ? 'PICKS CLOSED' : `LOCKS IN ${Math.floor(minutes/60)}H ${minutes%60}M`} · {id}</div><h1>{view.contest.name}</h1><p className="intro">{locked ? 'Your card is frozen. Picks remain private until the reveal.' : 'Your picks stay private. Submit when complete; edit until lock.'}</p>
+    <nav><a href={`/?contest=${encodeURIComponent(id)}${display ? '' : '&display=1'}`}>{display ? 'Participant view' : 'Shared display ↗'}</a></nav>
+    {error && <p className="error" role="alert">{error}</p>}{message && <p className="notice" role="status">{message}</p>}
+    <section className="players"><h2>The crew <small>{view.participants.length} playing</small></h2>{view.participants.length === 0 ? <p>No players yet. Be the first to make a questionable prediction.</p> : view.participants.map(p=><article key={p.participantId}><strong>{p.displayName}</strong><span>{p.attendance === 'REMOTE' ? 'Remote' : 'On site'}</span><b>{p.submissionStatus === 'SUBMITTED' ? 'Submitted' : `${p.completedSelections} / 15 picks`}</b></article>)}</section>
+    {!display && !card && <section className="entry"><h2>Get in the game</h2>{join ? <p role="status">Waiting for commissioner approval. Keep this tab open.</p> : locked ? <p>This contest is closed to new players.</p> : <form onSubmit={e=>{e.preventDefault(); void action(async()=>{const r=await api<{requestId:string;requestSecret:string}>(`${base}/join-requests`,'POST',{displayName:name});setJoin(r);try{sessionStorage.setItem(`tailgate-join-${id}`,JSON.stringify(r));}catch{}});}}><label htmlFor="name">Your name</label><div className="inline"><input id="name" required maxLength={80} value={name} onChange={e=>setName(e.target.value)}/><button disabled={busy}>Request to join</button></div></form>}</section>}
+    {!display && card && <section className="pick-card"><h2>Your card <small>{card.submissionStatus === 'SUBMITTED' ? 'Submitted' : 'Draft'}</small></h2>
+      {Object.entries(categories).map(([category,label])=><fieldset key={category} disabled={busy || locked}><legend>{label}</legend>{category==='CONFIDENCE' && <p>Use each confidence value from 1 to 6 once. Six is your strongest pick.</p>}{view.configuration.slots.filter(s=>s.category===category).map(slot=>{
+        const pick=draft.picks.find(p=>p.slotId===slot.id);
+        const update=(choiceId:string, confidence=pick?.confidence)=>change({...draft,picks:[...draft.picks.filter(p=>p.slotId!==slot.id),...(choiceId?[{slotId:slot.id,choiceId,...(confidence?{confidence}: {})}]:[])]});
+        return <div className="pick" key={slot.id}><label htmlFor={slot.id}>{slot.label}</label><div className="inline"><select id={slot.id} value={pick?.choiceId??''} onChange={e=>update(e.target.value)}><option value="" disabled={card.submissionStatus==='SUBMITTED'}>Choose your pick</option>{slot.choices.map(choice=><option key={choice.id} value={choice.id}>{choiceLabel(choice, view.configuration)}</option>)}</select>{category==='CONFIDENCE'&&<select aria-label={`${slot.label} confidence`} value={pick?.confidence??''} disabled={!pick} onChange={e=>update(pick!.choiceId,Number(e.target.value) as 1|2|3|4|5|6)}><option value="">Confidence</option>{[1,2,3,4,5,6].map(n=><option key={n} value={n}>{n} {n===6?'— highest':''}</option>)}</select>}</div></div>;
+      })}</fieldset>)}
+      <fieldset disabled={busy||locked}><legend>Final score tiebreaker</legend><p>Predict the Main Event score.</p><div className="inline">{(['home','away'] as const).map(side=><label key={side}>{view.configuration.games.find(g=>g.id===view.configuration.mainEventGameId)?.[side==='home'?'homeTeamId':'awayTeamId']}<input type="number" min={0} max={200} value={score[side]} onChange={e=>{const next={...score,[side]:e.target.value};setScore(next);change({...draft,prediction:next.home!==''&&next.away!==''?{home:Number(next.home),away:Number(next.away)}:undefined});}}/></label>)}</div></fieldset>
+      {partialScore && <p role="status">Enter both final scores before saving.</p>}<div className="submit-bar"><span role="status">{busy?'Saving…':dirty?'Unsaved changes':card.submissionStatus==='SUBMITTED'?'Submitted · editable until lock':'Saved as draft'}</span><button disabled={busy||locked||!dirty||partialScore} onClick={()=>void save()}>Save changes</button><button disabled={busy||locked||dirty||!card.validation.complete||card.submissionStatus==='SUBMITTED'} onClick={()=>void action(async()=>{adopt(await api<Card>(`${base}/me/submit`,'POST',{expectedCardRevision:card.cardRevision}));setMessage('Card submitted. You can still edit until lock.');})}>Submit card</button></div>
+    </section>}
+    {!display && <details className="commissioner"><summary>Commissioner</summary>{!admin?<form onSubmit={e=>{e.preventDefault();void action(async()=>{await api('/commissioner/login','POST',{password});setPassword('');setAdmin(true);});}}><label htmlFor="password">Commissioner password</label><div className="inline"><input id="password" type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/><button disabled={busy}>Sign in</button></div></form>:<><h2>Join requests</h2>{!requests.length?<p>No pending requests.</p>:requests.map(r=><article className="approval" key={r.requestId}><strong>{r.displayName}</strong>{['ON_SITE','REMOTE','DENY'].map(attendance=><button disabled={busy||locked} key={attendance} onClick={()=>void action(async()=>{await api(`${base}/join-requests/${r.requestId}/${attendance==='DENY'?'deny':'approve'}`,'POST',attendance==='DENY'?{}:{attendance});setRequests(rs=>rs.filter(x=>x.requestId!==r.requestId));setView(await api<View>(`${base}/pregame`));})}>{attendance==='DENY'?'Decline':attendance==='REMOTE'?'Approve remote':'Approve on site'}</button>)}</article>)}</>}</details>}
+  </main>;
+}

@@ -43,3 +43,8 @@ After explicit user approval, applied the saved bootstrap plan in verified perso
 Bootstrap state has been migrated to `tailgate/bootstrap.tfstate` in the private state bucket. A private, ignored backup is preserved at `.local/bootstrap-backup/before-s3-migration.tfstate`. A subsequent bootstrap plan reported no changes.
 
 The main stack uses `tailgate/foundation.tfstate` in the same bucket. The reviewed DynamoDB plan was applied: one addition, zero changes and zero deletions. Table `tailgate` is deployed in the verified personal account and region, with on-demand billing, deletion protection, point-in-time recovery, encryption and `expiresAt` TTL. API Lambda and API Gateway are now deployed; see [API deployment](../../docs/api-deployment.md) for commands, secrets and test evidence.
+
+
+## Frontend deployed
+
+Private S3 storage and CloudFront now host the React pregame interface with same-origin, uncached API forwarding. See [browser deployment](../../docs/web-deployment.md). Build frontend assets before planning the main stack.

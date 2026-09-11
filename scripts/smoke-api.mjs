@@ -7,7 +7,7 @@ import { fixture } from '../dist/packages/domain/src/fixture.js';
 import { keys } from '../dist/packages/persistence/src/dynamo.js';
 
 const origin = process.argv[2];
-assert.match(origin, /^https:\/\/[a-z0-9]+\.execute-api\.us-east-2\.amazonaws\.com$/);
+assert.match(origin, /^https:\/\/[a-z0-9]+\.cloudfront\.net$/);
 const source = await readFile(new URL('../infra/terraform/secrets.auto.tfvars', import.meta.url), 'utf8');
 const password = JSON.parse(source.match(/^commissioner_password\s*=\s*(".*")$/m)[1]);
 const id = `smoke-${randomUUID()}`;

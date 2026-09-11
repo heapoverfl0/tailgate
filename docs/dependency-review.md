@@ -71,3 +71,13 @@ Terraform initialized both stacks with `-backend=false`, an empty temporary CLI 
 AWS CLI 2.36.42 was downloaded from `https://awscli.amazonaws.com/AWSCLIV2-2.36.42.pkg`. macOS pkgutil reported a trusted Developer ID Installer signature from AMZN Mobile LLC (94KV3E626L), a trusted timestamp, and Apple notarization. Extracted the payload without running its installer/postinstall scripts and placed it in `~/.local/share/tailgate/aws-cli/2.36.42`. Its version was verified. The shared Homebrew AWS CLI remains 2.19.3, with its symlink unchanged.
 
 A dedicated private config, empty credentials file, and login-cache directory were created under `~/.config/tailgate/aws`. Browser login was initiated with an allowlisted child-process environment. Work profiles in `~/.aws` were not read or modified. Login completion and personal account identity verification are separate pending checks; no deployment is authorized by this tooling validation.
+
+## Frontend review — September 11, 2026 (installed after license approval)
+
+Resolved metadata only with `npm install --package-lock-only --ignore-scripts --no-audit --no-fund`: React/React DOM 19.3.0, their type packages 19.3.0 and Vite 8.3.0. Checked all 80 exact external entries in the resulting lockfile, including optional platform binaries, with Sonatype Guide. Full responses are in `sonatype-frontend-review.json`.
+
+Guide returned successful analysis for all 80 entries. Twelve Lightning CSS 1.33.0 entries (main package and platform binaries) fail the configured No Copyleft Licenses rule due to MPL-2.0; malware and security-threshold checks pass. React 19.3.0 reports sonatype-2017-0717, CVSS 2.1, while passing the configured policy. The upstream React issue discusses unsafe HTML injection/untrusted props; UI implementation must not use dangerouslySetInnerHTML or spread untrusted input as element props. A passing policy is not an absence-of-vulnerabilities guarantee.
+
+The user explicitly approved MPL-2.0 build tooling for this personal project. Installation proceeds from the reviewed lockfile with lifecycle scripts disabled (`npm ci --ignore-scripts --no-audit --no-fund`). This license exception does not waive malware/security review or authorize lifecycle scripts. Installation completed with all lifecycle scripts disabled. The frontend build and 56 existing tests passed. Browser rehearsal passed the pregame flow. Hosting validation is recorded separately in the deployment documentation. The deployed API continues to use the previously reviewed package set.
+
+References: [React issue 10506](https://github.com/facebook/react/issues/10506), [React versions](https://react.dev/versions).

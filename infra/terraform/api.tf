@@ -66,7 +66,7 @@ resource "aws_lambda_function" "api" {
   environment {
     variables = {
       TAILGATE_TABLE         = aws_dynamodb_table.tailgate.name
-      APP_ORIGIN             = aws_apigatewayv2_api.api.api_endpoint
+      APP_ORIGIN             = "https://${aws_cloudfront_distribution.web.domain_name}"
       COMMISSIONER_PASSWORD  = var.commissioner_password
       SESSION_SIGNING_SECRET = var.session_signing_secret
     }

@@ -17,6 +17,6 @@ Run `python3 scripts/smoke-api.py` after building. It discovers the endpoint fro
 
 All 56 existing unit/API/persistence contract tests pass. AWS HTTPS smoke testing supplements the earlier isolated DynamoDB Local scenario.
 
-Frontend hosting, realtime, scheduled poller, explicit persisted lock transition and game data integration remain outstanding. APP_ORIGIN currently equals the API endpoint; change it to the eventual CloudFront origin when adding the same-origin frontend/API distribution.
+Frontend hosting is now deployed; see [browser deployment](web-deployment.md). APP_ORIGIN equals the CloudFront origin, and smoke-api.py now tests through that origin. Realtime, scheduled poller, explicit persisted lock transition and game data integration remain outstanding.
 
 References: [Lambda Node.js runtimes](https://docs.aws.amazon.com/lambda/latest/dg/lambda-nodejs.html), [DynamoDB transaction IAM permissions](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis-iam.html).
