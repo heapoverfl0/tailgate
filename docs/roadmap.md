@@ -13,8 +13,8 @@ Source of truth: [Product spec](../tailgate-pickem-game-design-spec.md) and [Arc
 ## M0 — first deployable slice
 
 1. Completed the pick-card domain milestone: models, configuration validation/freezing, draft/Submit guards, resolution-based scoring and champion selection. See [domain milestone](domain-milestone.md) for decisions and remaining resolver work.
-2. Durable local repository and contest create/read are implemented; DynamoDB contest/card adapter and key/transaction contract tests are now implemented; see [DynamoDB milestone](dynamodb-milestone.md). The API now uses explicit repository operations, atomic DynamoDB join/session writes and the configured Lambda entry point. The local database integration scenario now passes against DynamoDB Local. Cloud deployment and validation remain pending.
-3. Commissioner login, join/approval/session exchange, card save/Submit and privacy/concurrency tests now run locally. See [local API milestone](local-api.md). Lambda wiring is implemented; packaging, deployment and session recovery remain pending.
+2. Durable local repository and contest create/read are implemented; DynamoDB contest/card adapter and key/transaction contract tests are now implemented; see [DynamoDB milestone](dynamodb-milestone.md). The API now uses explicit repository operations, atomic DynamoDB join/session writes and the configured Lambda entry point. The local database integration scenario now passes against DynamoDB Local. The API is deployed and its HTTPS integration smoke test passes; see [API deployment](api-deployment.md).
+3. Commissioner login, join/approval/session exchange, card save/Submit and privacy/concurrency tests now run locally. See [local API milestone](local-api.md). Lambda wiring is implemented; packaging and deployment pass; session recovery remains pending.
 4. Implement React/Vite participant and shared-display shell against purpose-built API views.
 5. Add realtime interface/AppSync wiring and local Lambda ZIP builds.
 6. Add Terraform for DynamoDB, Lambda, API Gateway, S3/CloudFront, AppSync, EventBridge, IAM and secret inputs; validate/plan before authorized deployment.
@@ -29,4 +29,4 @@ M3: CFBD normalization, overrides, realtime Live views and Live Director.
 M4: Main Event resolution and correlated contest outcome engine.
 M5: Final, historical results from the first completed contest, presentation polish. Expanded career analytics can follow.
 
-Dependency review and installation succeeded September 9, 2026. The private Terraform state bucket and DynamoDB table are deployed in personal account 965984382163 (us-east-2). Bootstrap state is migrated to S3. API cloud deployment/integration checks remain pending.
+Dependency review and installation succeeded September 9, 2026. The private Terraform state bucket and DynamoDB table are deployed in personal account 965984382163 (us-east-2). Bootstrap state is migrated to S3. API cloud deployment and HTTPS integration checks pass.

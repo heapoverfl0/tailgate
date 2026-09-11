@@ -1,6 +1,6 @@
 # Tailgate AWS foundation
 
-Target: personal AWS project account **965984382163**, **us-east-2**. Both provider configurations enforce `allowed_account_ids`. The S3 backend template independently enforces the same account. This is the state/database foundation, not yet the complete API deployment.
+Target: personal AWS project account **965984382163**, **us-east-2**. Both provider configurations enforce `allowed_account_ids`. The S3 backend template independently enforces the same account. The state/database foundation and API are deployed.
 
 ## Personal authentication boundary
 
@@ -42,4 +42,4 @@ After explicit user approval, applied the saved bootstrap plan in verified perso
 
 Bootstrap state has been migrated to `tailgate/bootstrap.tfstate` in the private state bucket. A private, ignored backup is preserved at `.local/bootstrap-backup/before-s3-migration.tfstate`. A subsequent bootstrap plan reported no changes.
 
-The main stack uses `tailgate/foundation.tfstate` in the same bucket. The reviewed DynamoDB plan was applied: one addition, zero changes and zero deletions. Table `tailgate` is deployed in the verified personal account and region, with on-demand billing, deletion protection, point-in-time recovery, encryption and `expiresAt` TTL. API Lambda and API Gateway are still pending.
+The main stack uses `tailgate/foundation.tfstate` in the same bucket. The reviewed DynamoDB plan was applied: one addition, zero changes and zero deletions. Table `tailgate` is deployed in the verified personal account and region, with on-demand billing, deletion protection, point-in-time recovery, encryption and `expiresAt` TTL. API Lambda and API Gateway are now deployed; see [API deployment](../../docs/api-deployment.md) for commands, secrets and test evidence.

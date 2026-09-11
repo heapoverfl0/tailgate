@@ -15,3 +15,5 @@ crash.log
 backend.hcl
 *.tfplan
 *.tfplan.json
+
+__pycache__/

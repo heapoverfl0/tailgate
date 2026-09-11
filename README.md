@@ -15,7 +15,7 @@ cp .env.example .env
 npm run dev:api
 ```
 
-The local API listens on http://127.0.0.1:3001 and saves state in the ignored `.local/tailgate.json` file. Try `/api/health`. Start with an empty store, log in, and create a contest using the [local API workflow](docs/local-api.md). All mutation requests must send the configured `Origin` and JSON content type. The Lambda entry point uses the same service with DynamoDB; it requires TAILGATE_TABLE, APP_ORIGIN (HTTPS), COMMISSIONER_PASSWORD and SESSION_SIGNING_SECRET. It has not been deployed.
+The local API listens on http://127.0.0.1:3001 and saves state in the ignored `.local/tailgate.json` file. Try `/api/health`. Start with an empty store, log in, and create a contest using the [local API workflow](docs/local-api.md). All mutation requests must send the configured `Origin` and JSON content type. The Lambda entry point uses the same service with DynamoDB; it requires TAILGATE_TABLE, APP_ORIGIN (HTTPS), COMMISSIONER_PASSWORD and SESSION_SIGNING_SECRET. It is deployed; see [API deployment](docs/api-deployment.md).
 
 ## Project map
 
@@ -35,4 +35,4 @@ The local API listens on http://127.0.0.1:3001 and saves state in the ignored `.
 - `packages/game-data`: provider boundary
 - `infra/terraform`: deployment planning notes
 
-This is a tested starting foundation, not the completed M0 deployment. The durable local API supports login, contest creation, join/approval and card save/Submit. The DynamoDB API adapter and Lambda wiring are implemented. Local DynamoDB integration validation passes. The private Terraform state bucket and DynamoDB table are deployed in the personal AWS account; see [infrastructure status](infra/terraform/README.md). React UI, realtime and API cloud deployment remain pending.
+This is a tested starting foundation, not the completed M0 deployment. The durable local API supports login, contest creation, join/approval and card save/Submit. The DynamoDB API adapter and Lambda wiring are implemented. Local DynamoDB integration validation passes. The private Terraform state bucket and DynamoDB table are deployed in the personal AWS account; see [infrastructure status](infra/terraform/README.md). The API is deployed and its HTTPS integration smoke test passes. React UI and realtime remain pending.
