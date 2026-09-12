@@ -1,3 +1,16 @@
+# Active contest: September 12, 2026
+
+Use [sept12-2026-final](https://djhbbw57tyj22.cloudfront.net/?contest=sept12-2026-final). This clean replacement was requested by the commissioner and starts with no players or cards. Earlier contests remain superseded copies; Hudson’s submitted card and Johann’s draft were not reinterpreted. Everyone must join this new code and submit fresh picks.
+
+Arizona at BYU replaces App State–ECU in Confidence and ATS, at 3:30 p.m. Eastern. ATS is frozen at BYU -7.5 (CFBD DraftKings line, captured in configuration). The other lines, Upset choices and noon Eastern lock are unchanged. CFBD game 401856810, BYU home 252, Arizona away 12. Poller mapping and partition permission move to this contest only.
+
+Week 2 AP rankings via CFBD: Oregon 6, Texas A&M 10, Oklahoma 11, Alabama 12, BYU 15, Tennessee 18. The frontend snapshot is explicitly scoped to this contest; IDs and scoring are unchanged. BYU’s earlier school preview listed 14, but the September 8 AP poll has 15. No rankings are inferred for unranked teams.
+
+Sources: https://api.collegefootballdata.com/games?year=2026&week=2&team=BYU ; https://api.collegefootballdata.com/lines?year=2026&week=2&team=BYU ; https://api.collegefootballdata.com/rankings?year=2026&week=2 . Schedule cross-check: https://byucougars.com/news/2026/05/27/tv-networks-kick-times-announced-for-four-byu-football-games .
+
+---
+Historical setup follows (superseded):
+
 # September 12, 2026 contest
 
 ## Revised contest — use this link

@@ -1,3 +1,4 @@
+import {rankedTeam,rankedLabel} from './team-label';
 import {PregameDisplay} from './PregameDisplay';
 import { useEffect, useRef, useState } from 'react';
 import {GameDay} from './GameDay';
@@ -25,7 +26,7 @@ export function choiceLabel(choice: PickChoice, config: ContestConfiguration): s
     label += ` ${spread > 0 ? '+' : ''}${spread}`;
   }
   if (parameters?.kind === 'GAME_TOTAL') label += ` ${parameters.total}`;
-  return label + (choice.points ? ` · ${choice.points} pts` : '');
+  return rankedLabel(label,config) + (choice.points ? ` · ${choice.points} pts` : '');
 }
 
 export function Contest({ id }: { id: string }) {
@@ -125,7 +126,7 @@ export function Contest({ id }: { id: string }) {
       {Object.entries(categories).map(([category,label])=><fieldset key={category} disabled={busy || locked}><legend>{label}</legend>{category==='CONFIDENCE' && <><p>Pick straight-up winners. Use each confidence value from 1 to 6 once. Six is your strongest pick.</p><p role="status"><strong>Available: {availableConfidence.length ? availableConfidence.join(', ') : 'All values assigned'}</strong></p>{card.submissionStatus==='SUBMITTED' && <p>Choose a used value to swap it with that game and keep your submitted card complete.</p>}</>}{view.configuration.slots.filter(s=>s.category===category).map(slot=>{
         const pick=draft.picks.find(p=>p.slotId===slot.id);
         const update=(choiceId:string, confidence=pick?.confidence)=>change({...draft,picks:[...draft.picks.filter(p=>p.slotId!==slot.id),...(choiceId?[{slotId:slot.id,choiceId,...(confidence?{confidence}: {})}]:[])]});
-        return <div className="pick" key={slot.id}><label htmlFor={slot.id}>{slot.label}</label><div className="inline"><select id={slot.id} value={pick?.choiceId??''} onChange={e=>update(e.target.value)}><option value="" disabled={card.submissionStatus==='SUBMITTED'}>Choose your pick</option>{slot.choices.map(choice=><option key={choice.id} value={choice.id}>{choiceLabel(choice, view.configuration)}</option>)}</select>{category==='CONFIDENCE'&&<select aria-label={`${slot.label} confidence`} value={pick?.confidence??''} disabled={!pick} onChange={e=>{
+        return <div className="pick" key={slot.id}><label htmlFor={slot.id}>{rankedLabel(slot.label,view.configuration)}</label><div className="inline"><select id={slot.id} value={pick?.choiceId??''} onChange={e=>update(e.target.value)}><option value="" disabled={card.submissionStatus==='SUBMITTED'}>Choose your pick</option>{slot.choices.map(choice=><option key={choice.id} value={choice.id}>{choiceLabel(choice, view.configuration)}</option>)}</select>{category==='CONFIDENCE'&&<select aria-label={`${slot.label} confidence`} value={pick?.confidence??''} disabled={!pick} onChange={e=>{
           const confidence=Number(e.target.value) as 1|2|3|4|5|6;
           const owner=confidenceOwner(confidence);
           if (owner && owner.id!==slot.id && card.submissionStatus==='SUBMITTED') {

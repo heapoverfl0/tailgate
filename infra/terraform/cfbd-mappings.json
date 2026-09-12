@@ -45,13 +45,13 @@
     "startDate": "2026-09-12T19:30:00.000Z"
   },
   {
-    "gameId": "app-state-ecu",
-    "externalId": 401864571,
-    "homeId": 151,
-    "awayId": 2026,
-    "homeTeamId": "ECU",
-    "awayTeamId": "App State",
-    "startDate": "2026-09-12T16:00:00.000Z"
+    "gameId": "arizona-byu",
+    "externalId": 401856810,
+    "homeId": 252,
+    "awayId": 12,
+    "homeTeamId": "BYU",
+    "awayTeamId": "Arizona",
+    "startDate": "2026-09-12T19:30:00.000Z"
   },
   {
     "gameId": "tennessee-georgia-tech",

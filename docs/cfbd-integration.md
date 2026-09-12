@@ -37,3 +37,6 @@ The poller role is limited to the revised contest's DynamoDB partition and its l
 References: [CFBD games API](https://api.collegefootballdata.com/api/games), [live plays API](https://api.collegefootballdata.com/api/plays), [access tiers](https://collegefootballdata.com/api-tiers).
 
 Final verification: both EventBridge rules are enabled; a normal invocation outside the window returned `outside_window`; the deployed no-write probe still matched seven games without warnings; final Terraform plan reports no changes; published HTML/assets match the build.
+
+## Slate replacement
+The commissioner requested a clean restart as `sept12-2026-final`, replacing App State–ECU with Arizona–BYU. The mapping and poller IAM partition were retargeted; the date window remains unchanged. Earlier contest identifiers above describe the prior deployment.

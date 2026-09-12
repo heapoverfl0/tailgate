@@ -22,7 +22,7 @@ resource "aws_iam_role_policy" "poller" {
   name = "tailgate-poller"
   role = aws_iam_role.poller.id
   policy = jsonencode({ Version = "2012-10-17", Statement = [
-    { Effect = "Allow", Action = ["dynamodb:GetItem", "dynamodb:Query", "dynamodb:UpdateItem", "dynamodb:PutItem"], Resource = aws_dynamodb_table.tailgate.arn, Condition = { "ForAllValues:StringEquals" = { "dynamodb:LeadingKeys" = ["CONTEST#sept12-2026-revised"] } } },
+    { Effect = "Allow", Action = ["dynamodb:GetItem", "dynamodb:Query", "dynamodb:UpdateItem", "dynamodb:PutItem"], Resource = aws_dynamodb_table.tailgate.arn, Condition = { "ForAllValues:StringEquals" = { "dynamodb:LeadingKeys" = ["CONTEST#sept12-2026-final"] } } },
     { Effect = "Allow", Action = ["logs:CreateLogStream", "logs:PutLogEvents"], Resource = "${aws_cloudwatch_log_group.poller.arn}:*" }
   ] })
 }
@@ -40,7 +40,7 @@ resource "aws_lambda_function" "poller" {
   environment {
     variables = {
       TAILGATE_TABLE      = aws_dynamodb_table.tailgate.name
-      TAILGATE_CONTEST_ID = "sept12-2026-revised"
+      TAILGATE_CONTEST_ID = "sept12-2026-final"
       CFBD_API_KEY        = var.cfbd_api_key
       CFBD_MAPPINGS       = file("${path.module}/cfbd-mappings.json")
       POLL_START          = "2026-09-12T16:00:00Z"

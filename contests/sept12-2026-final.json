@@ -1,0 +1,672 @@
+{
+  "contest": {
+    "id": "sept12-2026-final",
+    "name": "September 12 \u00b7 Tech vs. Tennessee",
+    "timezone": "America/New_York",
+    "lockAt": "2026-09-12T16:00:00.000Z"
+  },
+  "configuration": {
+    "contestId": "sept12-2026-final",
+    "mainEventGameId": "tennessee-georgia-tech",
+    "games": [
+      {
+        "id": "oklahoma-michigan",
+        "homeTeamId": "Michigan",
+        "awayTeamId": "Oklahoma"
+      },
+      {
+        "id": "arizona-state-texas-am",
+        "homeTeamId": "Texas A&M",
+        "awayTeamId": "Arizona State"
+      },
+      {
+        "id": "oregon-oklahoma-state",
+        "homeTeamId": "Oklahoma State",
+        "awayTeamId": "Oregon"
+      },
+      {
+        "id": "alabama-kentucky",
+        "homeTeamId": "Kentucky",
+        "awayTeamId": "Alabama"
+      },
+      {
+        "id": "mississippi-state-minnesota",
+        "homeTeamId": "Minnesota",
+        "awayTeamId": "Mississippi State"
+      },
+      {
+        "id": "arizona-byu",
+        "homeTeamId": "BYU",
+        "awayTeamId": "Arizona"
+      },
+      {
+        "id": "tennessee-georgia-tech",
+        "homeTeamId": "Georgia Tech",
+        "awayTeamId": "Tennessee"
+      }
+    ],
+    "propositions": [
+      {
+        "id": "winner-oklahoma-michigan",
+        "contestId": "sept12-2026-final",
+        "gameId": "oklahoma-michigan",
+        "label": "Oklahoma at Michigan \u00b7 12:00 p.m. ET",
+        "type": "STRAIGHT_UP_WINNER",
+        "parameters": {
+          "kind": "STRAIGHT_UP_WINNER"
+        }
+      },
+      {
+        "id": "winner-arizona-state-texas-am",
+        "contestId": "sept12-2026-final",
+        "gameId": "arizona-state-texas-am",
+        "label": "Arizona State at Texas A&M \u00b7 12:00 p.m. ET",
+        "type": "STRAIGHT_UP_WINNER",
+        "parameters": {
+          "kind": "STRAIGHT_UP_WINNER"
+        }
+      },
+      {
+        "id": "winner-oregon-oklahoma-state",
+        "contestId": "sept12-2026-final",
+        "gameId": "oregon-oklahoma-state",
+        "label": "Oregon at Oklahoma State \u00b7 12:00 p.m. ET",
+        "type": "STRAIGHT_UP_WINNER",
+        "parameters": {
+          "kind": "STRAIGHT_UP_WINNER"
+        }
+      },
+      {
+        "id": "winner-alabama-kentucky",
+        "contestId": "sept12-2026-final",
+        "gameId": "alabama-kentucky",
+        "label": "Alabama at Kentucky \u00b7 3:30 p.m. ET",
+        "type": "STRAIGHT_UP_WINNER",
+        "parameters": {
+          "kind": "STRAIGHT_UP_WINNER"
+        }
+      },
+      {
+        "id": "winner-mississippi-state-minnesota",
+        "contestId": "sept12-2026-final",
+        "gameId": "mississippi-state-minnesota",
+        "label": "Mississippi State at Minnesota \u00b7 3:30 p.m. ET",
+        "type": "STRAIGHT_UP_WINNER",
+        "parameters": {
+          "kind": "STRAIGHT_UP_WINNER"
+        }
+      },
+      {
+        "id": "winner-arizona-byu",
+        "contestId": "sept12-2026-final",
+        "gameId": "arizona-byu",
+        "label": "Arizona at BYU \u00b7 3:30 p.m. ET",
+        "type": "STRAIGHT_UP_WINNER",
+        "parameters": {
+          "kind": "STRAIGHT_UP_WINNER"
+        }
+      },
+      {
+        "id": "ats-oklahoma-michigan",
+        "contestId": "sept12-2026-final",
+        "gameId": "oklahoma-michigan",
+        "label": "Oklahoma at Michigan \u00b7 12:00 p.m. ET",
+        "type": "AGAINST_SPREAD",
+        "parameters": {
+          "kind": "AGAINST_SPREAD",
+          "favoredTeamId": "Oklahoma",
+          "spread": -5.5,
+          "source": "BetMGM public web-index snapshot: https://www.betmgm.com/en/sports/football-11/betting (retrieved 2026-09-11; not a live API quote)",
+          "capturedAt": "2026-09-11T18:35:31Z"
+        }
+      },
+      {
+        "id": "ats-alabama-kentucky",
+        "contestId": "sept12-2026-final",
+        "gameId": "alabama-kentucky",
+        "label": "Alabama at Kentucky \u00b7 3:30 p.m. ET",
+        "type": "AGAINST_SPREAD",
+        "parameters": {
+          "kind": "AGAINST_SPREAD",
+          "favoredTeamId": "Alabama",
+          "spread": -10,
+          "source": "Commissioner-supplied contest line, September 11, 2026",
+          "capturedAt": "2026-09-11T18:35:31Z"
+        }
+      },
+      {
+        "id": "ats-arizona-byu",
+        "contestId": "sept12-2026-final",
+        "gameId": "arizona-byu",
+        "label": "Arizona at BYU \u00b7 3:30 p.m. ET",
+        "type": "AGAINST_SPREAD",
+        "parameters": {
+          "kind": "AGAINST_SPREAD",
+          "favoredTeamId": "BYU",
+          "spread": -7.5,
+          "source": "CFBD / DraftKings",
+          "capturedAt": "2026-09-12T04:04:02.994430+00:00"
+        }
+      },
+      {
+        "id": "main-winner",
+        "contestId": "sept12-2026-final",
+        "gameId": "tennessee-georgia-tech",
+        "label": "Georgia Tech vs. Tennessee \u2014 Winner",
+        "type": "STRAIGHT_UP_WINNER",
+        "parameters": {
+          "kind": "STRAIGHT_UP_WINNER"
+        }
+      },
+      {
+        "id": "main-first-team",
+        "contestId": "sept12-2026-final",
+        "gameId": "tennessee-georgia-tech",
+        "label": "First team to score",
+        "type": "FIRST_TEAM_TO_SCORE",
+        "parameters": {
+          "kind": "FIRST_TEAM_TO_SCORE"
+        }
+      },
+      {
+        "id": "main-first-play",
+        "contestId": "sept12-2026-final",
+        "gameId": "tennessee-georgia-tech",
+        "label": "First scoring play",
+        "type": "FIRST_SCORE_TYPE",
+        "parameters": {
+          "kind": "FIRST_SCORE_TYPE"
+        }
+      },
+      {
+        "id": "main-halftime",
+        "contestId": "sept12-2026-final",
+        "gameId": "tennessee-georgia-tech",
+        "label": "Halftime leader",
+        "type": "HALFTIME_LEADER",
+        "parameters": {
+          "kind": "HALFTIME_LEADER",
+          "allowTie": true
+        }
+      },
+      {
+        "id": "main-total",
+        "contestId": "sept12-2026-final",
+        "gameId": "tennessee-georgia-tech",
+        "label": "Georgia Tech vs. Tennessee \u2014 Total points",
+        "type": "GAME_TOTAL",
+        "parameters": {
+          "kind": "GAME_TOTAL",
+          "total": 55.5,
+          "source": "CBS Sports Week 2 odds web-index snapshot: https://www.cbssports.com/college-football/odds/top25/2026/regular/week-2/",
+          "capturedAt": "2026-09-11T18:35:31Z"
+        }
+      }
+    ],
+    "slots": [
+      {
+        "id": "winner-oklahoma-michigan",
+        "contestId": "sept12-2026-final",
+        "category": "CONFIDENCE",
+        "order": 0,
+        "label": "Oklahoma at Michigan \u00b7 12:00 p.m. ET",
+        "required": true,
+        "choices": [
+          {
+            "id": "winner-oklahoma-michigan-0",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "winner-oklahoma-michigan",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Oklahoma"
+            }
+          },
+          {
+            "id": "winner-oklahoma-michigan-1",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "winner-oklahoma-michigan",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Michigan"
+            }
+          }
+        ]
+      },
+      {
+        "id": "winner-arizona-state-texas-am",
+        "contestId": "sept12-2026-final",
+        "category": "CONFIDENCE",
+        "order": 1,
+        "label": "Arizona State at Texas A&M \u00b7 12:00 p.m. ET",
+        "required": true,
+        "choices": [
+          {
+            "id": "winner-arizona-state-texas-am-0",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "winner-arizona-state-texas-am",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Arizona State"
+            }
+          },
+          {
+            "id": "winner-arizona-state-texas-am-1",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "winner-arizona-state-texas-am",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Texas A&M"
+            }
+          }
+        ]
+      },
+      {
+        "id": "winner-oregon-oklahoma-state",
+        "contestId": "sept12-2026-final",
+        "category": "CONFIDENCE",
+        "order": 2,
+        "label": "Oregon at Oklahoma State \u00b7 12:00 p.m. ET",
+        "required": true,
+        "choices": [
+          {
+            "id": "winner-oregon-oklahoma-state-0",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "winner-oregon-oklahoma-state",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Oregon"
+            }
+          },
+          {
+            "id": "winner-oregon-oklahoma-state-1",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "winner-oregon-oklahoma-state",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Oklahoma State"
+            }
+          }
+        ]
+      },
+      {
+        "id": "winner-alabama-kentucky",
+        "contestId": "sept12-2026-final",
+        "category": "CONFIDENCE",
+        "order": 3,
+        "label": "Alabama at Kentucky \u00b7 3:30 p.m. ET",
+        "required": true,
+        "choices": [
+          {
+            "id": "winner-alabama-kentucky-0",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "winner-alabama-kentucky",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Alabama"
+            }
+          },
+          {
+            "id": "winner-alabama-kentucky-1",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "winner-alabama-kentucky",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Kentucky"
+            }
+          }
+        ]
+      },
+      {
+        "id": "winner-mississippi-state-minnesota",
+        "contestId": "sept12-2026-final",
+        "category": "CONFIDENCE",
+        "order": 4,
+        "label": "Mississippi State at Minnesota \u00b7 3:30 p.m. ET",
+        "required": true,
+        "choices": [
+          {
+            "id": "winner-mississippi-state-minnesota-0",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "winner-mississippi-state-minnesota",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Mississippi State"
+            }
+          },
+          {
+            "id": "winner-mississippi-state-minnesota-1",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "winner-mississippi-state-minnesota",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Minnesota"
+            }
+          }
+        ]
+      },
+      {
+        "id": "winner-arizona-byu",
+        "contestId": "sept12-2026-final",
+        "category": "CONFIDENCE",
+        "order": 5,
+        "label": "Arizona at BYU \u00b7 3:30 p.m. ET",
+        "required": true,
+        "choices": [
+          {
+            "id": "winner-arizona-byu-0",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "winner-arizona-byu",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Arizona"
+            }
+          },
+          {
+            "id": "winner-arizona-byu-1",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "winner-arizona-byu",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "BYU"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ats-oklahoma-michigan",
+        "contestId": "sept12-2026-final",
+        "category": "ATS",
+        "order": 6,
+        "label": "Oklahoma at Michigan \u00b7 12:00 p.m. ET",
+        "required": true,
+        "choices": [
+          {
+            "id": "ats-oklahoma-michigan-0",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "ats-oklahoma-michigan",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Oklahoma"
+            }
+          },
+          {
+            "id": "ats-oklahoma-michigan-1",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "ats-oklahoma-michigan",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Michigan"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ats-alabama-kentucky",
+        "contestId": "sept12-2026-final",
+        "category": "ATS",
+        "order": 7,
+        "label": "Alabama at Kentucky \u00b7 3:30 p.m. ET",
+        "required": true,
+        "choices": [
+          {
+            "id": "ats-alabama-kentucky-0",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "ats-alabama-kentucky",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Alabama"
+            }
+          },
+          {
+            "id": "ats-alabama-kentucky-1",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "ats-alabama-kentucky",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Kentucky"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ats-arizona-byu",
+        "contestId": "sept12-2026-final",
+        "category": "ATS",
+        "order": 8,
+        "label": "Arizona at BYU \u00b7 3:30 p.m. ET",
+        "required": true,
+        "choices": [
+          {
+            "id": "ats-arizona-byu-0",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "ats-arizona-byu",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Arizona"
+            }
+          },
+          {
+            "id": "ats-arizona-byu-1",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "ats-arizona-byu",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "BYU"
+            }
+          }
+        ]
+      },
+      {
+        "id": "upset-special",
+        "contestId": "sept12-2026-final",
+        "category": "UPSET_SPECIAL",
+        "order": 9,
+        "label": "Upset Special \u2014 pick one underdog",
+        "required": true,
+        "choices": [
+          {
+            "id": "upset-oklahoma-michigan",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "winner-oklahoma-michigan",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Michigan"
+            },
+            "moneyline": 180,
+            "points": 2,
+            "source": "BetMGM public web-index snapshot: https://www.betmgm.com/en/sports/football-11/betting (retrieved 2026-09-11; not a live API quote)",
+            "capturedAt": "2026-09-11T18:35:31Z"
+          },
+          {
+            "id": "upset-arizona-state-texas-am",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "winner-arizona-state-texas-am",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Arizona State"
+            },
+            "moneyline": 500,
+            "points": 5,
+            "source": "BetMGM public web-index snapshot: https://www.betmgm.com/en/sports/football-11/betting (retrieved 2026-09-11; not a live API quote)",
+            "capturedAt": "2026-09-11T18:35:31Z"
+          },
+          {
+            "id": "upset-oregon-oklahoma-state",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "winner-oregon-oklahoma-state",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Oklahoma State"
+            },
+            "moneyline": 1150,
+            "points": 6,
+            "source": "BetMGM public web-index snapshot: https://www.betmgm.com/en/sports/football-11/betting (retrieved 2026-09-11; not a live API quote)",
+            "capturedAt": "2026-09-11T18:35:31Z"
+          },
+          {
+            "id": "no-upset",
+            "kind": "NO_UPSET",
+            "points": 1
+          }
+        ]
+      },
+      {
+        "id": "main-winner",
+        "contestId": "sept12-2026-final",
+        "category": "MAIN_EVENT",
+        "order": 10,
+        "label": "Georgia Tech vs. Tennessee \u2014 Winner",
+        "required": true,
+        "choices": [
+          {
+            "id": "main-winner-0",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "main-winner",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Tennessee"
+            }
+          },
+          {
+            "id": "main-winner-1",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "main-winner",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Georgia Tech"
+            }
+          }
+        ]
+      },
+      {
+        "id": "main-first-team",
+        "contestId": "sept12-2026-final",
+        "category": "MAIN_EVENT",
+        "order": 11,
+        "label": "First team to score",
+        "required": true,
+        "choices": [
+          {
+            "id": "main-first-team-0",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "main-first-team",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Tennessee"
+            }
+          },
+          {
+            "id": "main-first-team-1",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "main-first-team",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Georgia Tech"
+            }
+          }
+        ]
+      },
+      {
+        "id": "main-first-play",
+        "contestId": "sept12-2026-final",
+        "category": "MAIN_EVENT",
+        "order": 12,
+        "label": "First scoring play",
+        "required": true,
+        "choices": [
+          {
+            "id": "main-first-play-0",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "main-first-play",
+            "outcome": {
+              "kind": "SCORE_TYPE",
+              "scoreType": "TOUCHDOWN"
+            }
+          },
+          {
+            "id": "main-first-play-1",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "main-first-play",
+            "outcome": {
+              "kind": "SCORE_TYPE",
+              "scoreType": "FIELD_GOAL"
+            }
+          },
+          {
+            "id": "main-first-play-2",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "main-first-play",
+            "outcome": {
+              "kind": "SCORE_TYPE",
+              "scoreType": "OTHER"
+            }
+          }
+        ]
+      },
+      {
+        "id": "main-halftime",
+        "contestId": "sept12-2026-final",
+        "category": "MAIN_EVENT",
+        "order": 13,
+        "label": "Halftime leader",
+        "required": true,
+        "choices": [
+          {
+            "id": "main-halftime-0",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "main-halftime",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Georgia Tech"
+            }
+          },
+          {
+            "id": "main-halftime-1",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "main-halftime",
+            "outcome": {
+              "kind": "TEAM",
+              "teamId": "Tennessee"
+            }
+          },
+          {
+            "id": "main-halftime-2",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "main-halftime",
+            "outcome": {
+              "kind": "TIE"
+            }
+          }
+        ]
+      },
+      {
+        "id": "main-total",
+        "contestId": "sept12-2026-final",
+        "category": "MAIN_EVENT",
+        "order": 14,
+        "label": "Georgia Tech vs. Tennessee \u2014 Total points",
+        "required": true,
+        "choices": [
+          {
+            "id": "main-total-0",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "main-total",
+            "outcome": {
+              "kind": "TOTAL_SIDE",
+              "side": "OVER"
+            }
+          },
+          {
+            "id": "main-total-1",
+            "kind": "PROPOSITION_OUTCOME",
+            "propositionId": "main-total",
+            "outcome": {
+              "kind": "TOTAL_SIDE",
+              "side": "UNDER"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -52,4 +52,4 @@ The [Main Event participant presentation](main-event-presentation.md) is impleme
 
 The [Final presentation](final-presentation.md) is implemented, verified and deployed following explicit approval. It includes champion/co-champions, final standings and result-based unofficial awards.
 
-The [Pregame shared presentation](pregame-presentation.md) is implemented and locally verified, pending deployment.
+The [Pregame shared presentation](pregame-presentation.md) is deployed with kickoff windows and AP Week 2 labels. The active clean contest is sept12-2026-final, replacing App State–ECU with Arizona–BYU in Confidence and ATS; all seven poller mappings passed a no-write probe.

@@ -4,4 +4,4 @@ Implemented section 2 of the ASCII mockups: title/countdown, submitted card coun
 
 Kickoff windows are read from the existing ET times in frozen pick labels and sorted chronologically; the Main Event is grouped separately. Unrecognized times fall into Time to be announced. There is still no dedicated kickoff field. QR is shown only when the existing manifest matches the full participant URL. This pass does not alter participant editing or Reveal presentation. Commentary is derived from current completion, not invented history.
 
-Verification: 74 tests and builds pass. Rendering checks cover formatted countdown and hidden QR at the deadline. The synthetic crew preview was visually reviewed. No dependencies or cloud mutations. Deployment pending.
+Verification: 74 tests and builds pass. Rendering checks cover formatted countdown and hidden QR at the deadline. The synthetic crew preview was visually reviewed. No dependencies or cloud mutations. Deployed with the authorized Arizona–BYU slate replacement. Published assets and the QR match the build; the public display was verified with AP Week 2 ranks.
