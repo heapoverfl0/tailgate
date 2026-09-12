@@ -33,6 +33,13 @@ test('poll persists provider facts separately, preserves overrides, skips unchan
  time=new Date('2026-09-12T16:00:00Z');await poll(repo,client,'week',mappings,time);
  let s=await repo.getSnapshot('week');assert.equal(s.contest.phase,'REVEAL');assert.equal(s.gameDay?.games.g1?.home,21);
  const version=s.contest.version;await poll(repo,client,'week',mappings,time);assert.equal((await repo.getSnapshot('week')).contest.version,version);
+ const beforeFailure=await repo.getSnapshot('week');
+ const missing=await poll(repo,{get:async()=>[]},'week',mappings,time);
+ assert.equal(missing.status,'unchanged');assert.equal(missing.warnings?.filter(w=>w.startsWith('missing_game:')).length,7);
+ assert.deepEqual(await repo.getSnapshot('week'),beforeFailure);
+ await assert.rejects(poll(repo,{get:async()=>{throw new Error('Synthetic provider outage')}},'week',mappings,time),/Synthetic provider outage/);
+ assert.deepEqual(await repo.getSnapshot('week'),beforeFailure);
+
  for(let i=0;i<6;i++){s=await repo.updateDay('week',s.contest.version,'advance',{});}
  s=await repo.updateDay('week',s.contest.version,'result',{gameId:'g1',fact:{status:'FINAL',home:40,away:0},reason:'Observed correction'});
  const changed={get:async(path:string)=>path==='/scoreboard'?mappings.map(x=>({...board(x),homeTeam:{...board(x).homeTeam,points:30}})):undefined};

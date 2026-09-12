@@ -11,3 +11,10 @@ Outcome-equivalent candidates reuse point calculations. The API caches at most e
 Verification: 69 unit/API/repository tests, TypeScript and frontend builds. Tests cover scheduled/missing data, NO_UPSET, ATS pushes, voids, missing halftime facts, early banked points, unknown resolutions, score bounds, prediction tiebreaks, co-champions and consistency with the authoritative resolver. A synthetic 12-player case including a player with no path took about 0.3 seconds locally after optimization (not a Lambda latency guarantee). Local shared-display rehearsal showed 26 PTS, 28 PROJ and 3 LEFT for a synthetic Main Event card. No dependencies added.
 
 Deployment verified in the personal AWS account: API/poller code and frontend assets updated, HTTPS rehearsal passed the new projection assertions and removed 93 synthetic records. Published frontend bytes match the build; the real revised contest remains PREGAME with no public board. No real enrollment or picks changed.
+
+
+## Full game-day rehearsal
+
+The expanded HTTPS rehearsal uses two submitted synthetic cards with identical picks and different score predictions. It passed deadline rejection, all six Reveal steps and embargo, in-progress nine-point Confidence/ATS/Upset projection, both players having Main Event winning paths, commissioner correction and reversal, missing first-score/halftime facts, blocked premature finalization, final-score prediction tiebreak, final snapshot stability and rejected post-final edits. The successful run removed all 130 synthetic records. An initial test expectation undercounted the correction swing; that expectation was corrected from five to nine points, and its 125 synthetic records were also removed. No application defect was found in this rehearsal.
+
+The 69-test suite also passed with explicit empty-scoreboard and thrown-provider-outage checks that preserve the prior snapshot. These provider failures were simulated locally; this does not verify a real game-day CFBD outage or actual live feed timing. No production configuration, real cards or enrollment changed. No deployment was needed; only repeatable tests and this report changed.

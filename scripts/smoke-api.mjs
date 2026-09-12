@@ -73,6 +73,9 @@ try {
     for (const p of view.participants) { assert.equal(p.picks, undefined); assert.equal(p.prediction, undefined); }
     assert.equal(view.participants.find(p => p.displayName === 'Synthetic A').completedSelections, 15);
   }
+  // Same selections, different final-score predictions: exercise the actual tiebreak.
+  await call('PUT', `${base}/me/pick-card`, {...card,prediction:{home:10,away:10},expectedCardRevision:0}, b);
+  await call('POST', `${base}/me/submit`, {expectedCardRevision:1}, b);
   const race=await Promise.all([1,2].map(async()=>{
     const response=await fetch(origin+`${base}/me/pick-card`,{method:'PUT',headers:{origin,'content-type':'application/json',cookie:a},body:JSON.stringify({...card,expectedCardRevision:2}),signal:AbortSignal.timeout(20000)});
     return response.status;
@@ -93,14 +96,45 @@ try {
   assert.equal(day.board.entries.find(e=>e.displayName==='Synthetic A').picks.length,15);
   assert.ok(day.board.entries.every(e=>e.projectedPoints===e.points&&Number.isFinite(e.remainingPoints)));
   assert.ok(day.board.paths.every(p=>p.status==='PENDING_EARLIER_GAMES'));
-  for(const g of c.games){
-    await call('POST',`${base}/game-day/result`,{expectedVersion:day.contest.version,gameId:g.id,fact:{status:'FINAL',home:31,away:27,...(g.id===c.mainEventGameId?{firstTeam:g.homeTeamId,firstScore:'TOUCHDOWN',halftime:'TIE'}:{})},reason:'Synthetic deployment test'},admin);
+  const observe=async(gameId,fact)=>{
+    await call('POST',`${base}/game-day/result`,{expectedVersion:day.contest.version,gameId,fact,reason:'Synthetic game-day rehearsal'},admin);
     day=(await call('GET',`${base}/game-day`)).body;
-  }
+  };
+  const playerA=()=>day.board.entries.find(e=>e.displayName==='Synthetic A');
+  console.log('Rehearsal: two submitted cards, deadline rejection, and all six Reveal steps passed');
+  await observe('g1',{status:'IN_PROGRESS',home:7,away:10});
+  assert.equal(playerA().points,0);assert.equal(playerA().projectedPoints,9);
+  assert.equal(day.contest.phase,'LIVE');
+  for(const g of c.games.filter(g=>g.id!==c.mainEventGameId))await observe(g.id,{status:'FINAL',home:31,away:27});
+  assert.ok(day.board.paths.every(p=>p.status==='ALIVE'));
+  assert.ok(day.board.paths.every(p=>p.example&&Number.isFinite(p.example.points)));
+  const earlierPoints=playerA().points;
+  await observe('g1',{status:'FINAL',home:7,away:10});
+  assert.equal(playerA().points,earlierPoints+9);
+  assert.ok(day.overrideGameIds.includes('g1'));
+  await observe('g1',{status:'FINAL',home:31,away:27});
+  assert.equal(playerA().points,earlierPoints);
+  console.log('Rehearsal: live projections, two winning paths, and correction/recalculation passed');
+  const main=c.mainEventGameId;
+  // A provider can have scores but no first-scoring or halftime facts. Do not invent them.
+  await observe(main,{status:'IN_PROGRESS',home:14,away:7,period:3});
+  assert.equal(day.contest.phase,'MAIN_EVENT');
+  assert.equal(day.board.results.first.status,'UNRESOLVED');
+  assert.equal(day.board.results.half.status,'UNRESOLVED');
+  assert.equal(playerA().projectedPoints,earlierPoints+1);
+  await observe(main,{status:'FINAL',home:31,away:27});
+  await call('POST',`${base}/game-day/finalize`,{expectedVersion:day.contest.version},admin,422);
+  assert.equal(day.board.results.first.status,'UNRESOLVED');
+  await observe(main,{status:'FINAL',home:31,away:27,firstTeam:'main-home',firstScore:'TOUCHDOWN',halftime:'TIE'});
+  assert.equal(day.board.entries[0].points,day.board.entries[1].points);
+  assert.deepEqual(day.board.champions,[playerA().participantId]);
+  console.log('Rehearsal: missing facts block finalization; commissioner completion and prediction tiebreak passed');
   assert.ok(day.board.entries.every(e=>e.projectedPoints===e.points&&e.remainingPoints===0));
   assert.ok(day.board.paths.every(p=>p.status==='RESOLVED'));
   await call('POST',`${base}/game-day/finalize`,{expectedVersion:day.contest.version},admin);
   day=(await call('GET',`${base}/game-day`)).body;assert.equal(day.contest.phase,'FINAL');assert.equal(day.board.champions.length,1);
+  await call('POST',`${base}/game-day/result`,{expectedVersion:day.contest.version,gameId:main,fact:{status:'VOID'},reason:'Synthetic post-final rejection'},admin,422);
+  const finalAgain=(await call('GET',`${base}/game-day`)).body;assert.deepEqual(finalAgain.board,day.board);
   console.log('HTTPS smoke passed: pregame privacy, concurrent edits, deadline lock, Reveal embargo, results and final standings');
 } finally {
   // Only exact keys belonging to this unique synthetic contest are removed.
