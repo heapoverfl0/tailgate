@@ -3,8 +3,9 @@ import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { Contest, ContestConfiguration, ContestParticipant, PickCard, GameDay } from '../../domain/src/index.js';
 export interface JoinRequest { id: string; contestId: string; name: string; secretHash: string; status: 'PENDING' | 'APPROVED' | 'DENIED' | 'EXCHANGED'; participantId?: string }
-export interface ParticipantSession { contestId: string; participantId: string; expiresAt: number }
-export interface StoredContest { gameDay?: GameDay; dayAudit?: {at:string; action:string; body:Record<string,unknown>}[]; contest: Contest; configuration: ContestConfiguration; participants: Record<string, ContestParticipant>; cards: Record<string, PickCard> }
+export interface Recovery { secretHash: string; expiresAt: number }
+export interface ParticipantSession { sessionVersion?: number; contestId: string; participantId: string; expiresAt: number }
+export interface StoredContest { recoveries?: Record<string, Recovery>; gameDay?: GameDay; dayAudit?: {at:string; action:string; body:Record<string,unknown>}[]; contest: Contest; configuration: ContestConfiguration; participants: Record<string, ContestParticipant>; cards: Record<string, PickCard> }
 export interface Revision { contestId: string; participantId: string; revision: number; at: string; editedBy: 'PARTICIPANT'; before: PickCard; after: PickCard }
 export interface StoreState { schemaVersion: 1; contests: Record<string, StoredContest>; joins: Record<string, JoinRequest>; sessions: Record<string, ParticipantSession>; history: Revision[] }
 export interface Store { read(): Promise<StoreState>; transact<T>(change: (state: StoreState) => T): Promise<T> }

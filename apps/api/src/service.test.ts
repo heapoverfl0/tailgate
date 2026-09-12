@@ -183,3 +183,37 @@ test('deadline locks atomically; reveal embargo, audited results, correction and
 });
 
 test('commissioner cannot inject provider state through the public API',async()=>{const s=await setup();s.advance();assert.equal((await s.call('POST','/api/contests/week/game-day/provider',{expectedVersion:1,games:{}},s.admin)).statusCode,422);});
+
+
+test('recovery restores the existing card, revokes older sessions, and is one-use',async()=>{
+ const s=await setup();const player=await s.joinPlayer();const base='/api/contests/week';
+ await s.call('PUT',base+'/me/pick-card',{...s.card,expectedCardRevision:0},player.session);
+ const before=value(await s.call('GET',base+'/me/pick-card',undefined,player.session));
+ const pid=Object.keys((await s.store.read()).contests.week!.participants)[0]!;
+ assert.equal((await s.call('POST',base+'/recovery-code',{participantId:pid},player.session)).statusCode,401);
+ const issued=await s.call('POST',base+'/recovery-code',{participantId:pid},s.admin);assert.equal(issued.statusCode,201);
+ const code=value(issued).code;assert.equal(JSON.stringify(await s.store.read()).includes(code.split('.')[1]),false);
+ assert.equal((await s.call('POST',base+'/recover',{code:pid+'.'+'x'.repeat(43)})).statusCode,401);
+ const recovered=await s.call('POST',base+'/recover',{code});assert.equal(recovered.statusCode,200);
+ const fresh=cookie(recovered);assert.match(recovered.cookies![0]!,/HttpOnly/);
+ const after=value(await s.call('GET',base+'/me/pick-card',undefined,fresh));
+ assert.deepEqual(after.picks,before.picks);assert.deepEqual(after.prediction,before.prediction);assert.equal(after.cardRevision,before.cardRevision);
+ assert.equal((await s.call('GET',base+'/me/pick-card',undefined,player.session)).statusCode,401);
+ assert.equal((await s.call('POST',base+'/recover',{code})).statusCode,401);
+ assert.equal((await s.call('PUT',base+'/me/pick-card',{...s.card,expectedCardRevision:1},fresh)).statusCode,200);
+ assert.equal(Object.keys((await s.store.read()).contests.week!.participants).length,1);
+});
+test('recovery expiry, replacement, concurrent redemption, and post-lock access preserve the lock',async()=>{
+ const s=await setup();const player=await s.joinPlayer();const base='/api/contests/week';
+ const pid=Object.keys((await s.store.read()).contests.week!.participants)[0]!;
+ const issue=async()=>value(await s.call('POST',base+'/recovery-code',{participantId:pid},s.admin)).code;
+ const expired=await issue();s.advance();assert.equal((await s.call('POST',base+'/recover',{code:expired})).statusCode,401);
+ const replaced=await issue();const code=await issue();assert.equal((await s.call('POST',base+'/recover',{code:replaced})).statusCode,401);
+ const responses=await Promise.all([s.call('POST',base+'/recover',{code}),s.call('POST',base+'/recover',{code})]);
+ assert.deepEqual(responses.map(r=>r.statusCode).sort(),[200,401]);
+ const fresh=cookie(responses.find(r=>r.statusCode===200)!);
+ assert.equal((await s.call('GET',base+'/me/pick-card',undefined,fresh)).statusCode,200);
+ assert.equal((await s.call('PUT',base+'/me/pick-card',{...s.card,expectedCardRevision:0},fresh)).statusCode,409);
+ assert.equal(value(await s.call('GET',base+'/game-day')).board,undefined);
+ assert.equal((await s.call('GET',base+'/me/pick-card',undefined,player.session)).statusCode,401);
+});

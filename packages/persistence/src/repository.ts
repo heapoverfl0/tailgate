@@ -4,8 +4,10 @@ import type { Store, StoredContest, JoinRequest, ParticipantSession } from './st
 export class RepositoryError extends Error {
   constructor(readonly code: string, readonly canonical?: unknown) { super(code); }
 }
-export interface CardWrite { contestId: string; participantId: string; expectedCardRevision: number; card?: unknown; submit?: boolean }
+export interface CardWrite { sessionVersion?: number; contestId: string; participantId: string; expectedCardRevision: number; card?: unknown; submit?: boolean }
 export interface Repository {
+  createRecovery(id:string, participantId:string, secretHash:string, expiresAt:number):Promise<void>;
+  exchangeRecovery(id:string, participantId:string, secret:string, token:string, expiresAt:number):Promise<void>;
   updateDay(id: string, expectedVersion: number, action: string, body: Record<string,unknown>): Promise<StoredContest>;
   createContest(contest: Contest, config: ContestConfiguration): Promise<void>;
   getSnapshot(id: string): Promise<StoredContest>;
@@ -68,7 +70,24 @@ export class StoreRepository implements Repository {
       if (!j || j.contestId !== id) throw new RepositoryError('NOT_FOUND'); verifyJoinSecret(secret, j.secretHash);
       if (j.status !== 'APPROVED') throw new RepositoryError('JOIN_ALREADY_HANDLED');
       if (session.contestId !== id || session.participantId !== j.participantId || own(c.participants, session.participantId)?.status !== 'ACTIVE' || session.expiresAt <= this.now().getTime()) throw new RepositoryError('FORBIDDEN');
+      if((own(c.participants,session.participantId)?.sessionVersion??0)!==(session.sessionVersion??0))throw new RepositoryError('UNAUTHENTICATED');
       s.sessions[hashToken(token)] = session; j.status = 'EXCHANGED'; c.contest.version++;
+    });
+  }
+  async createRecovery(id:string, participantId:string, secretHash:string, expiresAt:number) {
+    await this.store.transact(s=>{const c=this.contest(s,id);
+      if(own(c.participants,participantId)?.status!=='ACTIVE')throw new RepositoryError('FORBIDDEN');
+      (c.recoveries??={})[participantId]={secretHash,expiresAt};c.contest.version++;
+      (c.dayAudit??=[]).push({at:this.now().toISOString(),action:'recovery-issued',body:{participantId}});
+    });
+  }
+  async exchangeRecovery(id:string, participantId:string, secret:string, token:string, expiresAt:number) {
+    await this.store.transact(s=>{const c=this.contest(s,id);const r=own(c.recoveries??{},participantId);const p=own(c.participants,participantId);
+      if(!r||r.expiresAt<=this.now().getTime()||p?.status!=='ACTIVE')throw new RepositoryError('UNAUTHENTICATED');
+      verifyJoinSecret(secret,r.secretHash);p.sessionVersion=(p.sessionVersion??0)+1;
+      s.sessions[hashToken(token)]={contestId:id,participantId,expiresAt,sessionVersion:p.sessionVersion};
+      delete c.recoveries![participantId];c.contest.version++;
+      (c.dayAudit??=[]).push({at:this.now().toISOString(),action:'recovery-redeemed',body:{participantId}});
     });
   }
   async resolveSession(token: string, id: string) {
@@ -76,11 +95,13 @@ export class StoreRepository implements Repository {
     if (!session || session.expiresAt <= this.now().getTime()) return undefined;
     if (session.contestId !== id) throw new RepositoryError('FORBIDDEN');
     if (own(this.contest(s, id).participants, session.participantId)?.status !== 'ACTIVE') throw new RepositoryError('FORBIDDEN');
+    if((own(this.contest(s,id).participants,session.participantId)?.sessionVersion??0)!==(session.sessionVersion??0))return undefined;
     return session;
   }
   async savePickCard(input: CardWrite) {
     return this.store.transact(s => { const c = this.contest(s, input.contestId); const p = own(c.participants, input.participantId);
       if (!p || p.status !== 'ACTIVE') throw new RepositoryError('FORBIDDEN');
+      if(input.sessionVersion!==undefined && input.sessionVersion!==(p.sessionVersion??0))throw new RepositoryError('UNAUTHENTICATED');
       const before = c.cards[p.participantId]!; const at = this.now().toISOString();
       let saved;
       try { saved = prepareCardSave(c.configuration, c.contest, p, input.submit ? before : input.card, input.expectedCardRevision, at, input.submit); }

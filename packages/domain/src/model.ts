@@ -9,6 +9,7 @@ export interface Contest {
 }
 export interface Player { id: string; name: string }
 export interface ContestParticipant {
+  sessionVersion?: number;
   contestId: string; participantId: string; playerId: string; displayName: string;
   attendance: Attendance; status: 'ACTIVE' | 'NOT_PLAYING'; cardRevision: number;
   submissionStatus: 'DRAFT' | 'SUBMITTED'; submittedAt?: string;

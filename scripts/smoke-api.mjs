@@ -56,7 +56,7 @@ try {
     sessions.push(cookie.split('=')[1]);
     return cookie;
   };
-  const a = await join('Synthetic A');
+  let a = await join('Synthetic A');
   const b = await join('Synthetic B');
   const saved = await call('PUT', `${base}/me/pick-card`, { ...card, expectedCardRevision: 0 }, a);
   assert.equal(saved.body.cardRevision, 1);
@@ -77,14 +77,34 @@ try {
   await call('PUT', `${base}/me/pick-card`, {...card,prediction:{home:10,away:10},expectedCardRevision:0}, b);
   await call('POST', `${base}/me/submit`, {expectedCardRevision:1}, b);
   const race=await Promise.all([1,2].map(async()=>{
-    const response=await fetch(origin+`${base}/me/pick-card`,{method:'PUT',headers:{origin,'content-type':'application/json',cookie:a},body:JSON.stringify({...card,expectedCardRevision:2}),signal:AbortSignal.timeout(20000)});
-    return response.status;
+    // A retryable transaction contention response must be retried with the SAME revision.
+    for(let attempt=0;attempt<3;attempt++){
+      const response=await fetch(origin+`${base}/me/pick-card`,{method:'PUT',headers:{origin,'content-type':'application/json',cookie:a},body:JSON.stringify({...card,expectedCardRevision:2}),signal:AbortSignal.timeout(20000)});
+      if(response.status!==503)return response.status;
+      await new Promise(resolve=>setTimeout(resolve,100*(attempt+1)));
+    }
+    return 503;
   }));
   assert.deepEqual(race.sort(),[200,409]);
+  const pid=(await call('GET',`${base}/pregame`)).body.participants.find(p=>p.displayName==='Synthetic A').participantId;
+  const recoverA=async()=>{
+    await call('POST',`${base}/recovery-code`,{participantId:pid},a,401);
+    const issued=await call('POST',`${base}/recovery-code`,{participantId:pid},admin,201);
+    const old=a;const recovered=await call('POST',`${base}/recover`,{code:issued.body.code});
+    a=sessionCookie(recovered);sessions.push(a.split('=')[1]);
+    await call('GET',`${base}/me/pick-card`,undefined,old,401);
+    await call('POST',`${base}/recover`,{code:issued.body.code},'',401);
+    const restored=(await call('GET',`${base}/me/pick-card`,undefined,a)).body;
+    assert.equal(restored.cardRevision,3);assert.equal(restored.submissionStatus,'SUBMITTED');assert.equal(restored.picks.length,15);
+  };
+  await recoverA();
   // Advance ONLY this uniquely named synthetic contest's deadline; never touch real contests.
   assert.ok(id.startsWith('smoke-'));
   await client.send(new UpdateCommand({TableName:'tailgate',Key:keys.contest(id),UpdateExpression:'SET lockAtMs = :ms, #d.#lock = :lock, #d.#v = #d.#v + :one',ConditionExpression:'#d.#id = :id AND #d.#phase = :pregame',ExpressionAttributeNames:{'#d':'data','#lock':'lockAt','#v':'version','#id':'id','#phase':'phase'},ExpressionAttributeValues:{':ms':Date.now()-1000,':lock':new Date(Date.now()-1000).toISOString(),':one':1,':id':id,':pregame':'PREGAME'}}));
   await call('PUT',`${base}/me/pick-card`,{...card,expectedCardRevision:3},a,409);
+  await recoverA();
+  await call('PUT',`${base}/me/pick-card`,{...card,expectedCardRevision:3},a,409);
+  console.log('Recovery passed before and after lock: same card, revoked old sessions, single-use codes');
   let day=(await call('GET',`${base}/game-day`)).body;
   assert.equal(day.contest.phase,'REVEAL');assert.equal(day.board,undefined);assert.deepEqual(day.reveal.groups,[]);
   await call('POST',`${base}/game-day/advance`,{expectedVersion:day.contest.version},'',401);

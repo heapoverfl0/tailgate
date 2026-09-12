@@ -11,6 +11,7 @@ const part = (id: string) => { if (!id || id.length > 200 || id.includes('#')) t
 export const keys = {
   contest: (id: string): Key => ({ PK: `CONTEST#${part(id)}`, SK: 'META' }),
   join: (id: string, requestId: string): Key => ({ PK: `CONTEST#${part(id)}`, SK: `JOIN#${part(requestId)}` }),
+  recovery: (id:string, participantId:string):Key=>({PK:`CONTEST#${part(id)}`,SK:`RECOVERY#${part(participantId)}`}),
   participant: (id: string, participant: string): Key => ({ PK: `CONTEST#${part(id)}`, SK: `PARTICIPANT#${part(participant)}` }),
   pick: (id: string, participant: string, slot: string): Key => ({ PK: `CONTEST#${part(id)}`, SK: `PICK#${part(participant)}#${part(slot)}` }),
   history: (id: string, participant: string, slot: string, at: string, revision: string): Key => ({ PK: `PICKHISTORY#${part(id)}#${part(participant)}`, SK: `${part(at)}#${part(slot)}#${part(revision)}` }),
@@ -73,6 +74,7 @@ export type { CardWrite } from './repository.js';
 export function buildCardTransaction(table: string, snapshot: StoredContest, input: CardWrite, at: Date): Action[] {
   const p = own(snapshot.participants, input.participantId);
   if (!p || input.contestId !== snapshot.contest.id) throw new RepositoryError('FORBIDDEN');
+  if(input.sessionVersion!==undefined && input.sessionVersion!==(p.sessionVersion??0))throw new RepositoryError('UNAUTHENTICATED');
   const before = snapshot.cards[input.participantId]!;
   const saved = prepareCardSave(snapshot.configuration, snapshot.contest, p, input.submit ? before : input.card, input.expectedCardRevision, at.toISOString(), input.submit);
   const nextParticipant = { ...p, cardRevision: p.cardRevision + 1, submissionStatus: saved.submissionStatus,
@@ -80,9 +82,9 @@ export function buildCardTransaction(table: string, snapshot: StoredContest, inp
     ...(saved.card.prediction === undefined ? {} : { prediction: saved.card.prediction }) };
   const actions: Action[] = [protect(table, keys.contest(input.contestId), at.getTime()), { Put: {
     TableName: table, Item: { ...keys.participant(input.contestId, p.participantId), data: nextParticipant },
-    ConditionExpression: '#d.#revision = :expected AND #d.#status = :active',
-    ExpressionAttributeNames: { '#d': 'data', '#revision': 'cardRevision', '#status': 'status' },
-    ExpressionAttributeValues: { ':expected': input.expectedCardRevision, ':active': 'ACTIVE' },
+    ConditionExpression: '#d.#revision = :expected AND #d.#status = :active AND '+((p.sessionVersion??0)===0?'(attribute_not_exists(#d.#sv) OR #d.#sv = :sv)':'#d.#sv = :sv'),
+    ExpressionAttributeNames: { '#d': 'data', '#revision': 'cardRevision', '#status': 'status', '#sv':'sessionVersion' },
+    ExpressionAttributeValues: { ':expected': input.expectedCardRevision, ':active': 'ACTIVE', ':sv':p.sessionVersion??0 },
   } }];
   const revision = String(p.cardRevision + 1);
   for (const slot of snapshot.configuration.slots) {
@@ -172,6 +174,7 @@ export class DynamoContestRepository implements Repository {
         if (e.CancellationReasons?.[1]?.Code === 'ConditionalCheckFailed') {
           const latest = await this.getSnapshot(input.contestId);
           if (own(latest.participants, input.participantId)?.status !== 'ACTIVE') throw new RepositoryError('FORBIDDEN');
+          if(input.sessionVersion!==undefined && input.sessionVersion!==(own(latest.participants,input.participantId)?.sessionVersion??0))throw new RepositoryError('UNAUTHENTICATED');
           throw new RepositoryError('CARD_REVISION_CONFLICT', { participant: own(latest.participants, input.participantId), card: own(latest.cards, input.participantId) });
         }
         // A storage contention/throttle error is not a participant revision conflict.
@@ -242,8 +245,43 @@ export class DynamoContestRepository implements Repository {
     await this.joinWrite([
       protect(this.table, keys.contest(id), this.now().getTime()),
       { Put: { TableName: this.table, Item: { ...keys.join(id, requestId), data: { ...request, status: 'EXCHANGED' } }, ConditionExpression: '#d.#s = :approved AND #d.#hash = :hash AND #d.#p = :p', ExpressionAttributeNames: { '#d': 'data', '#s': 'status', '#hash': 'secretHash', '#p': 'participantId' }, ExpressionAttributeValues: { ':approved': 'APPROVED', ':hash': request.secretHash, ':p': session.participantId } } },
-      { ConditionCheck: { TableName: this.table, Key: keys.participant(id, session.participantId), ConditionExpression: '#d.#s = :active', ExpressionAttributeNames: { '#d': 'data', '#s': 'status' }, ExpressionAttributeValues: { ':active': 'ACTIVE' } } },
+      { ConditionCheck: { TableName: this.table, Key: keys.participant(id, session.participantId), ConditionExpression: '#d.#s = :active AND (attribute_not_exists(#d.#sv) OR #d.#sv = :zero)', ExpressionAttributeNames: { '#d': 'data', '#s': 'status', '#sv':'sessionVersion' }, ExpressionAttributeValues: { ':active': 'ACTIVE', ':zero':0 } } },
       { Put: { TableName: this.table, Item: { ...keys.session(token), data: session, expiresAt: Math.floor(session.expiresAt / 1000) }, ConditionExpression: 'attribute_not_exists(PK)' } },
+    ]);
+  }
+  private async recoveryWrite(actions:Action[]) {
+    guardTransaction(actions);
+    try {await this.client.send(new TransactWriteCommand({ClientRequestToken:randomUUID(),TransactItems:actions}));}
+    catch(error){const e=error as {name?:string;CancellationReasons?:{Code?:string}[]};
+      if(e.name==='TransactionCanceledException'){
+        if(e.CancellationReasons?.some(r=>r.Code==='ConditionalCheckFailed'))throw new RepositoryError('UNAUTHENTICATED');
+        throw new RepositoryError('TRANSACTION_RETRY_REQUIRED');
+      }throw error;
+    }
+  }
+  private recoveryMeta(id:string):Action {return {Update:{TableName:this.table,Key:keys.contest(id),UpdateExpression:'SET #d.#v = #d.#v + :one',ConditionExpression:'attribute_exists(PK)',ExpressionAttributeNames:{'#d':'data','#v':'version'},ExpressionAttributeValues:{':one':1}}};}
+  private recoveryAudit(id:string,participantId:string,action:string):Action {return {Put:{TableName:this.table,Item:{PK:keys.contest(id).PK,SK:`AUDIT#RECOVERY#${randomUUID()}`,data:{at:this.now().toISOString(),action,participantId}},ConditionExpression:'attribute_not_exists(PK)'}};}
+  async createRecovery(id:string,participantId:string,secretHash:string,expiresAt:number) {
+    await this.recoveryWrite([
+      this.recoveryMeta(id),
+      {ConditionCheck:{TableName:this.table,Key:keys.participant(id,participantId),ConditionExpression:'#d.#s = :active',ExpressionAttributeNames:{'#d':'data','#s':'status'},ExpressionAttributeValues:{':active':'ACTIVE'}}},
+      {Put:{TableName:this.table,Item:{...keys.recovery(id,participantId),data:{secretHash,expiresAt},expiresAt:Math.floor(expiresAt/1000)}}},
+      this.recoveryAudit(id,participantId,'recovery-issued'),
+    ]);
+  }
+  async exchangeRecovery(id:string,participantId:string,secret:string,token:string,expiresAt:number) {
+    const item=await this.get(keys.recovery(id,participantId));const r=item?.data;
+    if(!r || r.expiresAt<=this.now().getTime())throw new RepositoryError('UNAUTHENTICATED');
+    verifyJoinSecret(secret,r.secretHash);
+    const p=await this.get(keys.participant(id,participantId));
+    if(p?.data.status!=='ACTIVE')throw new RepositoryError('UNAUTHENTICATED');
+    const previous=p.data.sessionVersion??0;const version=previous+1;
+    await this.recoveryWrite([
+      this.recoveryMeta(id),
+      {Delete:{TableName:this.table,Key:keys.recovery(id,participantId),ConditionExpression:'#d.#hash = :hash AND #d.#exp > :now',ExpressionAttributeNames:{'#d':'data','#hash':'secretHash','#exp':'expiresAt'},ExpressionAttributeValues:{':hash':r.secretHash,':now':this.now().getTime()}}},
+      {Update:{TableName:this.table,Key:keys.participant(id,participantId),UpdateExpression:'SET #d.#sv = :next',ConditionExpression:'#d.#s = :active AND '+(previous===0?'(attribute_not_exists(#d.#sv) OR #d.#sv = :old)':'#d.#sv = :old'),ExpressionAttributeNames:{'#d':'data','#s':'status','#sv':'sessionVersion'},ExpressionAttributeValues:{':active':'ACTIVE',':old':previous,':next':version}}},
+      {Put:{TableName:this.table,Item:{...keys.session(token),data:{contestId:id,participantId,expiresAt,sessionVersion:version},expiresAt:Math.floor(expiresAt/1000)},ConditionExpression:'attribute_not_exists(PK)'}},
+      this.recoveryAudit(id,participantId,'recovery-redeemed'),
     ]);
   }
   async resolveSession(rawToken: string, contestId: string): Promise<ParticipantSession | undefined> {
@@ -253,6 +291,7 @@ export class DynamoContestRepository implements Repository {
     if (session.contestId !== contestId) throw new RepositoryError('FORBIDDEN');
     const p = await this.get(keys.participant(contestId, session.participantId));
     if (p?.data.status !== 'ACTIVE') throw new RepositoryError('FORBIDDEN');
+    if((p?.data.sessionVersion??0)!==(session.sessionVersion??0))return undefined;
     return session;
   }
   async revokeSession(rawToken: string): Promise<void> {

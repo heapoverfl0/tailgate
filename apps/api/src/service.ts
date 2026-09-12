@@ -113,6 +113,21 @@ export function createService(repository: Repository, settings: ApiSettings) {
           return { participantId: p.participantId, displayName: p.displayName, attendance: p.attendance, status: p.status, submissionStatus: p.submissionStatus, completedSelections: v.validSelections.length };
         }) } };
       }
+      if(req.method==='POST' && action==='recovery-code') {
+        commissioner(req);const body=bodyObject(req.body);
+        if(!safeId(body.participantId))return fail(422,'INVALID_PARTICIPANT');
+        const secret=randomBytes(32).toString('base64url');const expiresAt=now().getTime()+15*60_000;
+        await repository.createRecovery(id,body.participantId,hash(secret),expiresAt);
+        return {statusCode:201,body:{code:`${body.participantId}.${secret}`,expiresAt}};
+      }
+      if(req.method==='POST' && action==='recover') {
+        const body=bodyObject(req.body);const parts=typeof body.code==='string'?body.code.trim().split('.'):[];
+        if(parts.length!==2 || !safeId(parts[0]) || !/^[A-Za-z0-9_-]{43}$/.test(parts[1]!))return fail(401,'UNAUTHENTICATED');
+        const token=randomBytes(32).toString('base64url');
+        try {await repository.exchangeRecovery(id,parts[0],parts[1]!,token,now().getTime()+30*86400000);}
+        catch(e){if(e instanceof RepositoryError && e.code==='UNAUTHENTICATED')return fail(401,'INVALID_RECOVERY_CODE');throw e;}
+        return {statusCode:200,body:{status:'RECOVERED'},cookies:[setCookie('tailgate_participant',token,30*86400)]};
+      }
       if (req.method === 'GET' && action === 'join-requests') {
         commissioner(req); const c = await repository.getSnapshot(id);
         const locked = c.contest.phase !== 'PREGAME' || !!c.contest.lockedAt || now().getTime() >= Date.parse(c.contest.lockAt);
@@ -166,7 +181,7 @@ export function createService(repository: Repository, settings: ApiSettings) {
         const p = await participant(req, id);
         if (!Number.isSafeInteger(body.expectedCardRevision) || (body.expectedCardRevision as number) < 0) return fail(400, 'INVALID_REVISION');
         try {
-          const c = await repository.savePickCard({ contestId: id, participantId: p.participantId, expectedCardRevision: body.expectedCardRevision as number, card: body, submit: action === 'me/submit' });
+          const c = await repository.savePickCard({ contestId: id, participantId: p.participantId, expectedCardRevision: body.expectedCardRevision as number, sessionVersion:p.sessionVersion??0, card: body, submit: action === 'me/submit' });
           return { statusCode: 200, body: cardView(c, p.participantId) };
         } catch (error) {
           if ((error as Error).message === 'CARD_REVISION_CONFLICT') {
