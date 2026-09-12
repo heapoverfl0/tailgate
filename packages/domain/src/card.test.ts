@@ -229,4 +229,14 @@ test('shared game exposure includes all categories and uses the authoritative sc
  const g=presentation.games.find(g=>g.id==='g1')!;assert.deepEqual(g.categories,['CONFIDENCE','ATS','UPSET_SPECIAL']);assert.equal(g.players[0]!.projected,9);assert.equal(g.players[0]!.banked,0);assert.equal(g.players[0]!.picks.length,3);
  card.picks.find(p=>p.slotId==='upset')!.choiceId='coward';const next=livePresentation(c,standings(s),s.gameDay.games);assert.equal(next.games.find(g=>g.id==='g1')!.players[0]!.projected,3);
  assert.equal(next.games.find(g=>g.id==='main')!.fact,undefined);
+ for(const data of [presentation,next]){const b=data.projectionBreakdowns[0]!;assert.equal(b.total,b.banked+b.pending.reduce((sum,p)=>sum+p.points,0));}
+ assert.equal(presentation.projectionBreakdowns[0]!.total,9);
+ assert.equal(next.projectionBreakdowns[0]!.banked,1);
+ assert.equal(next.projectionBreakdowns[0]!.total,standings(s).entries[0]!.projectedPoints);
+ assert.ok(next.projectionBreakdowns[0]!.pending.some(p=>p.gameStatus==='SCHEDULED'&&p.points===0));
+ s.gameDay.games.g1={status:'FINAL' as any,home:7,away:10};
+ const ended=livePresentation(c,standings(s),s.gameDay.games).projectionBreakdowns[0]!;
+ assert.equal(ended.total,standings(s).entries[0]!.projectedPoints);
+ assert.ok(!ended.pending.some(p=>['g1','ats','upset'].includes(p.slotId)));
+
 });

@@ -24,5 +24,15 @@ export function livePresentation(c:ContestConfiguration,board:ReturnType<typeof 
  const active=games.filter(g=>g.fact?.status==='IN_PROGRESS');
  // Initial feature uses unresolved exposure; the display holds its choice while that game stays live.
  const featuredGameId=[...active].sort((a,b)=>b.stakes-a.stakes||a.id.localeCompare(b.id))[0]?.id;
- return {games,featuredGameId};
+ const projectionBreakdowns=board.entries.map(e=>{
+  const pending=validateCard(c,{picks:e.picks}).validSelections.flatMap(pick=>{
+   const slot=c.slots.find(s=>s.id===pick.slotId)!;
+   const choice=slot.choices.find(ch=>ch.id===pick.choiceId)!;
+   if(choice.kind==='NO_UPSET'||board.results[choice.propositionId]?.status!=='UNRESOLVED')return [];
+   const prop=c.propositions.find(p=>p.id===choice.propositionId)!;
+   return [{slotId:pick.slotId,choiceId:pick.choiceId,points:liveProjection(c,{picks:[pick]},board.results,facts).projectedPoints,gameStatus:facts[prop.gameId]?.status??'SCHEDULED'}];
+  });
+  return {participantId:e.participantId,banked:e.points,pending,total:e.points+pending.reduce((sum,p)=>sum+p.points,0)};
+ });
+ return {games,featuredGameId,projectionBreakdowns};
 }
