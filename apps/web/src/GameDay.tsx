@@ -1,3 +1,4 @@
+import {Reveal} from './Reveal';
 import {rankedTeam,rankedLabel} from './team-label';
 import {FinalResults} from './FinalResults';
 import {MainEvent} from './MainEvent';
@@ -17,6 +18,7 @@ export function GameDay({id,config,admin,shared=false,participantId}:{id:string;
   const act=async(action:string,body:Record<string,unknown>={})=>{if(!view)return;setBusy(true);setError('');try{await api(`${base}/${action}`,'POST',{...body,expectedVersion:view.contest.version});await load();}catch(e){setError(e instanceof Error?e.message:'Request failed');await load().catch(()=>{});}finally{setBusy(false)}};
   const selectGame=(id:string)=>{setGame(id);const f=view?.games?.[id];setStatus(f?.status==='SCHEDULED'?'IN_PROGRESS':f?.status??'FINAL');setHome(f?.home===undefined?'':String(f.home));setAway(f?.away===undefined?'':String(f.away));setFirstTeam(f?.firstTeam??'');setFirstScore(f?.firstScore??'');setHalf(f?.halftime??'');setReason('');};
   if(!view || view.contest.phase==='PREGAME')return null;
+  if(view.contest.phase==='REVEAL'&&view.reveal)return <Reveal id={id} config={config} view={view} admin={admin} busy={busy} advance={()=>void act('advance')} error={error||refreshError} shared={shared}/>;
   if(shared&&view.contest.phase==='FINAL'&&view.board)return <>{refreshError&&<p role="alert">{refreshError}</p>}<FinalResults id={id} config={config} view={view} shared/></>;
   if(shared&&view.board&&view.live)return <SharedLive id={id} config={config} view={view} refreshError={refreshError}/>;
   const selected=config.games.find(g=>g.id===game)!;
