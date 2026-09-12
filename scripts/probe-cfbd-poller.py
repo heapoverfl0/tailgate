@@ -7,7 +7,7 @@ from pathlib import Path
 from personal_aws import CLI, verified_environment
 
 env=verified_environment()
-url='https://djhbbw57tyj22.cloudfront.net/api/contests/sept12-2026-final/game-day'
+url='https://djhbbw57tyj22.cloudfront.net/api/contests/sept12-2026-revised/game-day'
 def view():
     with urllib.request.urlopen(url,timeout=20) as response:
         return json.load(response)

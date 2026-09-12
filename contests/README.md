@@ -1,3 +1,7 @@
+## Game-day correction — active contest is revised
+
+The commissioner confirmed that the six-player live contest is `sept12-2026-revised`. Automatic polling was restored to its original mapping including App State–ECU. Use https://djhbbw57tyj22.cloudfront.net/?contest=sept12-2026-revised . No picks or enrollment were reset. The later BYU replacement has only one submitted player and is not the active contest. Prior replacement notes below are superseded by this operational correction.
+
 # Active contest: September 12, 2026
 
 Use [sept12-2026-final](https://djhbbw57tyj22.cloudfront.net/?contest=sept12-2026-final). This clean replacement was requested by the commissioner and starts with no players or cards. Earlier contests remain superseded copies; Hudson’s submitted card and Johann’s draft were not reinterpreted. Everyone must join this new code and submit fresh picks.
