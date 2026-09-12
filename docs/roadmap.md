@@ -46,4 +46,4 @@ Commissioner-issued, one-use [session recovery](session-recovery.md) is implemen
 
 The first [rule-based commentary engine](commentary.md) is implemented, tested and deployed following explicit approval. It adds phase-safe Reveal jokes, current live standings/losing-confidence observations and champion lines. Expanded directors, tone controls and persistent commentary history remain pending.
 
-The mockup-based [shared Live presentation](shared-live-presentation.md) is implemented and browser-tested locally; deployment approval is pending. It replaces the stacked shared view with standings, featured game exposure, slate strip and bottom implications/commentary.
+The mockup-based [shared Live presentation](shared-live-presentation.md) is implemented, browser-tested and deployed following explicit approval. The cloud rehearsal passed and its synthetic records were cleaned up. It replaces the stacked shared view with standings, featured game exposure, slate strip and bottom implications/commentary.
