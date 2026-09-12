@@ -9,7 +9,7 @@ from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 root = Path(__file__).resolve().parents[1]
 lock = json.loads((root / 'package-lock.json').read_text())
 files = {}
-for folder in ['dist/apps/api/src', 'dist/packages']:
+for folder in ['dist/apps/api/src', 'dist/apps/poller/src', 'dist/packages']:
     for path in (root / folder).rglob('*.js'):
         if path.name.endswith('.test.js') or path.name in {'fixture.js', 'local.js'}:
             continue

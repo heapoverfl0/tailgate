@@ -1,0 +1,65 @@
+[
+  {
+    "gameId": "oklahoma-michigan",
+    "externalId": 401856679,
+    "homeId": 130,
+    "awayId": 201,
+    "homeTeamId": "Michigan",
+    "awayTeamId": "Oklahoma",
+    "startDate": "2026-09-12T16:00:00.000Z"
+  },
+  {
+    "gameId": "arizona-state-texas-am",
+    "externalId": 401856683,
+    "homeId": 245,
+    "awayId": 9,
+    "homeTeamId": "Texas A&M",
+    "awayTeamId": "Arizona State",
+    "startDate": "2026-09-12T16:00:00.000Z"
+  },
+  {
+    "gameId": "oregon-oklahoma-state",
+    "externalId": 401856782,
+    "homeId": 197,
+    "awayId": 2483,
+    "homeTeamId": "Oklahoma State",
+    "awayTeamId": "Oregon",
+    "startDate": "2026-09-12T16:00:00.000Z"
+  },
+  {
+    "gameId": "alabama-kentucky",
+    "externalId": 401856674,
+    "homeId": 96,
+    "awayId": 333,
+    "homeTeamId": "Kentucky",
+    "awayTeamId": "Alabama",
+    "startDate": "2026-09-12T19:30:00.000Z"
+  },
+  {
+    "gameId": "mississippi-state-minnesota",
+    "externalId": 401856677,
+    "homeId": 135,
+    "awayId": 344,
+    "homeTeamId": "Minnesota",
+    "awayTeamId": "Mississippi State",
+    "startDate": "2026-09-12T19:30:00.000Z"
+  },
+  {
+    "gameId": "app-state-ecu",
+    "externalId": 401864571,
+    "homeId": 151,
+    "awayId": 2026,
+    "homeTeamId": "ECU",
+    "awayTeamId": "App State",
+    "startDate": "2026-09-12T16:00:00.000Z"
+  },
+  {
+    "gameId": "tennessee-georgia-tech",
+    "externalId": 401856681,
+    "homeId": 59,
+    "awayId": 2633,
+    "homeTeamId": "Georgia Tech",
+    "awayTeamId": "Tennessee",
+    "startDate": "2026-09-12T23:00:00.000Z"
+  }
+]

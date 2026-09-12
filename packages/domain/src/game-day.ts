@@ -1,12 +1,13 @@
 import type { Contest, ContestConfiguration, ContestParticipant, PickCard, Resolution, ScorePrediction } from './model.js';
 import { scoreCard, champions } from './scoring.js';
 export interface GameFact {
-  status: 'IN_PROGRESS' | 'FINAL' | 'VOID';
+  status: 'SCHEDULED' | 'IN_PROGRESS' | 'FINAL' | 'VOID';
+  period?: number; clock?: string;
   home?: number; away?: number;
   firstTeam?: string; firstScore?: 'TOUCHDOWN' | 'FIELD_GOAL' | 'OTHER' | 'VOID';
   halftime?: string;
 }
-export interface GameDay { revealStep: number; games: Record<string, GameFact>; final?: ReturnType<typeof standings> }
+export interface GameDay { providerGames?:Record<string,GameFact>; overrides?:Record<string,GameFact>; providerUpdatedAt?:string; revealStep: number; games: Record<string, GameFact>; final?: ReturnType<typeof standings> }
 export interface DaySnapshot { contest: Contest; configuration: ContestConfiguration; participants: Record<string, ContestParticipant>; cards: Record<string, PickCard>; gameDay?: GameDay }
 export const revealTitles = ['Picks locked', 'The consensus', 'Lone wolves', 'Upset Special', 'Confidence on the line', 'The Main Event', 'The picks are public'];
 export function resolutions(c: ContestConfiguration, games: Record<string, GameFact>): Record<string, Resolution> {
@@ -48,7 +49,9 @@ export function parseGameFact(c: ContestConfiguration, gameId: string, value: un
   const game=c.games.find(g=>g.id===gameId);
   if (!game || !value || typeof value!=='object' || Array.isArray(value)) throw new Error('INVALID_RESULT');
   const f=value as Record<string,unknown>;
-  if (Object.keys(f).some(k=>!['status','home','away','firstTeam','firstScore','halftime'].includes(k)) || !['IN_PROGRESS','FINAL','VOID'].includes(String(f.status))) throw new Error('INVALID_RESULT');
+  if (Object.keys(f).some(k=>!['status','home','away','firstTeam','firstScore','halftime','period','clock'].includes(k)) || !['SCHEDULED','IN_PROGRESS','FINAL','VOID'].includes(String(f.status))) throw new Error('INVALID_RESULT');
+  if(f.period!==undefined && (!Number.isInteger(f.period) || (f.period as number)<1 || (f.period as number)>20)) throw new Error('INVALID_RESULT');
+  if(f.clock!==undefined && (typeof f.clock!=='string' || f.clock.length>30)) throw new Error('INVALID_RESULT');
   for (const field of ['home','away']) if (f[field]!==undefined && (!Number.isInteger(f[field]) || (f[field] as number)<0 || (f[field] as number)>200)) throw new Error('INVALID_RESULT');
   if ((f.home===undefined)!==(f.away===undefined) || (f.status==='FINAL' && f.home===undefined)) throw new Error('INVALID_RESULT');
   if (f.firstTeam!==undefined && ![game.homeTeamId,game.awayTeamId,'VOID'].includes(String(f.firstTeam))) throw new Error('INVALID_RESULT');
@@ -69,10 +72,24 @@ export function changeDay(s: DaySnapshot, action: string, body: Record<string,un
     if (s.contest.phase!=='REVEAL' || day.revealStep>=6) throw new Error('NOT_READY');
     day.revealStep++; if (day.revealStep===6) s.contest.phase='LIVE'; return;
   }
+  if (action==='provider') {
+    if(s.contest.phase==='FINAL' || !body.games || typeof body.games!=='object' || Array.isArray(body.games)) throw new Error('NOT_READY');
+    const next:Record<string,GameFact>={...day.providerGames};
+    for(const [id,fact] of Object.entries(body.games)) next[id]=parseGameFact(s.configuration,id,fact);
+    day.overrides??=structuredClone(day.games);
+    day.providerGames=next;day.providerUpdatedAt=at;day.games={...next,...day.overrides};
+    if(s.contest.phase==='LIVE' && ['IN_PROGRESS','FINAL'].includes(day.games[s.configuration.mainEventGameId]?.status??''))s.contest.phase='MAIN_EVENT';
+    return;
+  }
+  if(action==='clear-override') {
+    if(!['LIVE','MAIN_EVENT'].includes(s.contest.phase) || typeof body.gameId!=='string' || !s.configuration.games.some(g=>g.id===body.gameId) || typeof body.reason!=='string' || !body.reason.trim() || body.reason.length>500)throw new Error('INVALID_RESULT');
+    day.overrides??=structuredClone(day.games);delete day.overrides[body.gameId];day.games={...day.providerGames,...day.overrides};return;
+  }
   if (action==='result') {
     if (!['LIVE','MAIN_EVENT'].includes(s.contest.phase) || typeof body.reason!=='string' || !body.reason.trim() || body.reason.length>500 || typeof body.gameId!=='string') throw new Error('INVALID_RESULT');
     const fact=parseGameFact(s.configuration,body.gameId,body.fact);
-    day.games[body.gameId]=fact;
+    day.overrides??=structuredClone(day.games);day.overrides[body.gameId]=fact;
+    day.games={...day.providerGames,...day.overrides};
     if (body.gameId===s.configuration.mainEventGameId && fact.status!=='VOID') s.contest.phase='MAIN_EVENT';
     return;
   }

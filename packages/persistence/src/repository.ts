@@ -42,7 +42,7 @@ export class StoreRepository implements Repository {
       if(c.contest.version!==expectedVersion) throw new RepositoryError('CONTEST_VERSION_CONFLICT');
       const at=this.now().toISOString();
       changeDay(c,action,body,at);c.contest.version++;
-      (c.dayAudit??=[]).push({at,action,body:structuredClone(body)});return c;
+      if(action!=='provider')(c.dayAudit??=[]).push({at,action,body:structuredClone(body)});return c;
     });
   }
   async listJoins(id: string) { const s = await this.store.read(); this.contest(s, id); return Object.values(s.joins).filter(j => j.contestId === id); }

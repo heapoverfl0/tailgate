@@ -181,3 +181,5 @@ test('deadline locks atomically; reveal embargo, audited results, correction and
  const stored=(await s.store.read()).contests.week!;assert.ok(stored.gameDay?.final);assert.ok(stored.dayAudit!.length>=15);
  assert.equal((await result('g1',{status:'VOID'})).statusCode,422);
 });
+
+test('commissioner cannot inject provider state through the public API',async()=>{const s=await setup();s.advance();assert.equal((await s.call('POST','/api/contests/week/game-day/provider',{expectedVersion:1,games:{}},s.admin)).statusCode,422);});

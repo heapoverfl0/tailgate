@@ -30,3 +30,5 @@ Standings show banked points, with equal-point ranks shared. The champion calcul
 The API and frontend builds pass. API packaging still excludes web dependencies. The deployment plan only updates API code and frontend assets.
 
 The deployed HTTPS rehearsal passed all steps and removed 93 synthetic records. Published HTML, CSS and JS match the build; the real revised contest remains PREGAME and its game-day response contains no board/cards.
+
+The subsequent [CFBD integration](cfbd-integration.md) adds automated scoreboard/play polling and a separate override layer for the revised contest. It supersedes the earlier manual-only/provider-pending status; advanced projections and directors remain pending.

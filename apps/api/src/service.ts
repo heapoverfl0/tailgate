@@ -82,10 +82,11 @@ export function createService(repository: Repository, settings: ApiSettings) {
       if(req.method==='GET' && action==='game-day') {
         const publicPicks=['LIVE','MAIN_EVENT','FINAL'].includes(snapshot.contest.phase);
         return {statusCode:200,body:{contest:snapshot.contest, reveal:snapshot.contest.phase==='REVEAL'?revealView(snapshot):undefined,
-          ...(publicPicks?{board:snapshot.gameDay?.final??standings(snapshot),games:snapshot.gameDay?.games??{}}:{})}};
+          ...(publicPicks?{board:snapshot.gameDay?.final??standings(snapshot),games:snapshot.gameDay?.games??{},overrideGameIds:Object.keys(snapshot.gameDay?.overrides??snapshot.gameDay?.games??{}),providerUpdatedAt:snapshot.gameDay?.providerUpdatedAt}:{})}};
       }
       if(req.method==='POST' && action.startsWith('game-day/')) {
         commissioner(req); const body=bodyObject(req.body);
+        if(!['advance','result','finalize','clear-override'].includes(action.slice('game-day/'.length))) return fail(422,'INVALID_ACTION');
         if(!Number.isSafeInteger(body.expectedVersion)) return fail(400,'INVALID_REVISION');
         try {
           const updated=await repository.updateDay(id,body.expectedVersion as number,action.slice('game-day/'.length),body);

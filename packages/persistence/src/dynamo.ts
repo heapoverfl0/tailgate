@@ -138,7 +138,7 @@ export class DynamoContestRepository implements Repository {
     try {
       await this.client.send(new TransactWriteCommand({ClientRequestToken:randomUUID(),TransactItems:[
         {Update:{TableName:this.table,Key:keys.contest(id),UpdateExpression:'SET #d = :d, #day = :day',ConditionExpression:'#d.#v = :expected',ExpressionAttributeNames:{'#d':'data','#v':'version','#day':'gameDay'},ExpressionAttributeValues:{':d':c.contest,':day':c.gameDay,':expected':expectedVersion}}},
-        {Put:{TableName:this.table,Item:{PK:keys.contest(id).PK,SK:`AUDIT#${c.contest.version}`,data:{at,action,body,actor:'COMMISSIONER_OR_SERVER'}},ConditionExpression:'attribute_not_exists(PK)'}},
+        ...(action==='provider'?[]:[{Put:{TableName:this.table,Item:{PK:keys.contest(id).PK,SK:`AUDIT#${c.contest.version}`,data:{at,action,body,actor:action==='lock'?'SERVER':'COMMISSIONER'}},ConditionExpression:'attribute_not_exists(PK)'}}]),
       ]}));
     } catch(error) {
       const e=error as {name?:string;CancellationReasons?:{Code?:string}[]};

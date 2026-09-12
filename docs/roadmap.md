@@ -34,3 +34,5 @@ M4: Main Event resolution and correlated contest outcome engine.
 M5: Final, historical results from the first completed contest, presentation polish. Expanded career analytics can follow.
 
 Dependency review and installation succeeded September 9, 2026. The private Terraform state bucket and DynamoDB table are deployed in personal account 965984382163 (us-east-2). Bootstrap state is migrated to S3. API cloud deployment and HTTPS integration checks pass.
+
+The subsequent [CFBD integration](cfbd-integration.md) adds automated scoreboard/play polling and a separate override layer for the revised contest. It supersedes the earlier manual-only/provider-pending status; advanced projections and directors remain pending.

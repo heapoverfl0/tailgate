@@ -57,6 +57,9 @@ test('DynamoDB Local: API joins, atomic session exchange, cards, privacy, denial
     assert.equal((await call('POST','/api/contests/week/join-requests',{displayName:'Late'})).statusCode,409);
     let day=body(await call('GET','/api/contests/week/game-day'));
     assert.equal(day.contest.phase,'REVEAL');assert.equal(day.board,undefined);
+    await repository.updateDay('week',day.contest.version,'provider',{games:{g1:{status:'IN_PROGRESS',home:7,away:0,period:1,clock:'08:00'}}});
+    assert.equal((await repository.getSnapshot('week')).gameDay?.providerGames?.g1?.home,7);
+    day=body(await call('GET','/api/contests/week/game-day'));
     for(let step=0;step<6;step++) {
       assert.equal((await call('POST','/api/contests/week/game-day/advance',{expectedVersion:day.contest.version},admin)).statusCode,200);
       day=body(await call('GET','/api/contests/week/game-day'));
