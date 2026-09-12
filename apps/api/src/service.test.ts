@@ -67,7 +67,13 @@ test('public and commissioner pregame views cannot expose other participants car
     assert.equal(view.participants[0].completedSelections, 15);
   }
   assert.equal((await s.call('GET', '/api/contests/week/me/pick-card', undefined, s.admin)).statusCode, 401);
-  assert.deepEqual(value(await s.call('GET', '/api/contests/week/me/pick-card', undefined, b.session)).picks, []);
+  const ownA = value(await s.call('GET', '/api/contests/week/me/pick-card', undefined, a.session));
+  const ownB = value(await s.call('GET', '/api/contests/week/me/pick-card', undefined, b.session));
+  const publicView = value(await s.call('GET', '/api/contests/week/pregame'));
+  assert.equal(ownA.participantId, publicView.participants.find((p:any)=>p.displayName==='A').participantId);
+  assert.equal(ownB.participantId, publicView.participants.find((p:any)=>p.displayName==='B').participantId);
+  assert.notEqual(ownA.participantId, ownB.participantId);
+  assert.deepEqual(ownB.picks, []);
 });
 test('simultaneous writes with the same revision have one winner and one audit record', async () => {
   const s = await setup(); const { session } = await s.joinPlayer();

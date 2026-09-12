@@ -44,7 +44,7 @@ export function createService(repository: Repository, settings: ApiSettings) {
   const cardView = (c: StoredContest, participantId: string) => {
     const p = c.participants[participantId]!; const card = c.cards[participantId]!;
     const { complete, missingSlotIds, predictionMissing } = validateCard(c.configuration, card);
-    return { ...card, contestVersion: c.contest.version, cardRevision: p.cardRevision, submissionStatus: p.submissionStatus, validation: { complete, missingSlotIds, predictionMissing } };
+    return { ...card, participantId, contestVersion: c.contest.version, cardRevision: p.cardRevision, submissionStatus: p.submissionStatus, validation: { complete, missingSlotIds, predictionMissing } };
   };
   // Public read models only; a new persisted version always invalidates the entry.
   const boards=new Map<string,{version:number;board:ReturnType<typeof standings>}>();

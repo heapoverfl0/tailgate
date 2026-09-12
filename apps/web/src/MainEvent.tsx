@@ -1,0 +1,21 @@
+import type {ContestConfiguration} from '../../../packages/domain/src/index';
+import type {DayView} from './GameDay';
+import {choiceLabel} from './Contest';
+
+export function MainEvent({config,view,participantId}:{config:ContestConfiguration;view:DayView;participantId?:string}) {
+  const board=view.board;
+  const game=config.games.find(g=>g.id===config.mainEventGameId);
+  if(!board||!game)return null;
+  const fact=view.games?.[game.id];
+  const me=board.entries.find(e=>e.participantId===participantId);
+  const slots=config.slots.filter(s=>s.category==='MAIN_EVENT');
+  const decided=slots.filter(s=>s.choices.some(ch=>ch.kind==='PROPOSITION_OUTCOME'&&board.results[ch.propositionId]?.status!==undefined&&board.results[ch.propositionId]?.status!=='UNRESOLVED')).length;
+  const path=board.paths?.find(p=>p.participantId===participantId);
+  const words=(value?:string)=>value?.replaceAll('_',' ')??'Not specified';
+  return <section className="main-event" aria-label="Main Event dashboard">
+    <header className="main-event-header"><span className="eyebrow">MAIN EVENT</span><h2>{game.awayTeamId} at {game.homeTeamId}</h2><div className="main-event-score"><span>{game.awayTeamId}<b>{fact?.away??'—'}</b></span><span>{game.homeTeamId}<b>{fact?.home??'—'}</b></span></div><p>{words(fact?.status??'SCHEDULED')}{fact?.period?` · Period ${fact.period}`:''}{fact?.clock?` · ${fact.clock} (observed)`:''}</p></header>
+    {me?<><div className="main-event-position"><strong>{me.displayName} · #{me.rank}</strong><span>{me.points} PTS banked · {me.projectedPoints} PROJ</span></div><section><h3>Your picks <small>{decided} / {slots.length} decided</small></h3>{slots.map(slot=>{const pick=me.picks.find(p=>p.slotId===slot.id);const choice=slot.choices.find(c=>c.id===pick?.choiceId);const grade=me.grades.find(g=>g.slotId===slot.id);return <article className="main-event-pick" key={slot.id}><div><strong>{slot.label}</strong><span>{choice?choiceLabel(choice,config):'Unanswered'}</span></div><span className={`main-event-result result-${grade?.result??'PENDING'}`}>{grade?.result==='WIN'?'✓ Correct':grade?.result==='LOSS'?'✕ Missed':grade?.result==='VOID'?'Void':grade?.result==='PUSH'?'Push':!pick?'No pick':'Pending'}<small>{grade?.points??0} pts</small></span></article>})}{me.prediction&&<p className="main-event-note">Your tiebreak prediction: {game.awayTeamId} {me.prediction.away} · {game.homeTeamId} {me.prediction.home}</p>}</section></>:<p className="main-event-note">Viewing public standings. Recover your existing player access below to see your picks and winning path here.</p>}
+    <section><h3>Day standings</h3><ol className="main-event-standings">{board.entries.map(e=><li key={e.participantId} className={e.participantId===participantId?'is-you':''}><span>#{e.rank} <strong>{e.displayName}</strong>{e.participantId===participantId?' · YOU':''}</span><b>{e.points}<small>PTS</small></b></li>)}</ol><p className="main-event-note">Ranks use banked points. PROJ includes points implied by current live scores, not a forecast.</p></section>
+    {me&&<section className="main-event-path"><span className="eyebrow">HOW YOU WIN</span><h3>{path?.status==='ALIVE'?'A winning path remains':path?.status==='NO_PATH'?'No winning path under current facts':path?.status==='RESOLVED'?'Main Event resolved':'Waiting on earlier games'}</h3>{path?.example&&<><p>One possible finish, including the tiebreak:</p><ul><li>Final score: {game.awayTeamId} {path.example.away} · {game.homeTeamId} {path.example.home}</li><li>First team to score: {words(path.example.firstTeam)}</li><li>First scoring play: {words(path.example.firstScore)}</li><li>Halftime leader: {words(path.example.halftime)}</li></ul><p><strong>You finish with {path.example.points} points as {path.example.coChampion?'co-champion':'champion'}.</strong></p></>}{path?.status==='PENDING_EARLIER_GAMES'&&<p>Scenarios become available when the earlier games resolve.</p>}{path?.status==='RESOLVED'&&<p>Check the standings. The commissioner must verify and finalize the results before the winner is official.</p>}<p className="main-event-note">These are possibilities, not odds or guaranteed requirements. The model uses current facts and final scores up to 200 per team; corrections or cancellations can change the outcome.</p></section>}
+  </section>;
+}
