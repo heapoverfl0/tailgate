@@ -21,6 +21,10 @@ Source of truth: [Product spec](../tailgate-pickem-game-design-spec.md) and [Arc
 
 M0 is not complete. Acceptance includes deployed health, seeded contest reads, login/join, frontend loading and manually invoked poller stub.
 
+## Game-day baseline
+
+The manual lock → staged Reveal → observed result entry → standings → final history flow is implemented and deployed. See [game-day operation and limits](game-day.md). Provider automation, advanced directors and outcome projections remain pending.
+
 ## Later milestones
 
 M1: full contest curation, autosave and Submit flows.

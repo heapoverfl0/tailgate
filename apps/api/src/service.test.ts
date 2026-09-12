@@ -145,3 +145,39 @@ test('pending request cap and lock prevent approval and session issuance', async
   assert.equal((await s.call('POST', `/api/contests/week/join-requests/${request.requestId}/approve`, { attendance: 'REMOTE' }, s.admin)).statusCode, 409);
   assert.equal((await s.call('POST', `/api/contests/week/join-requests/${request.requestId}`, { requestSecret: request.requestSecret })).statusCode, 409);
 });
+
+test('simultaneous edits allow one winner and preserve canonical card', async()=>{
+ const s=await setup();const p=await s.joinPlayer();
+ const responses=await Promise.all([s.call('PUT','/api/contests/week/me/pick-card',{...s.card,expectedCardRevision:0},p.session),s.call('PUT','/api/contests/week/me/pick-card',{picks:[],expectedCardRevision:0},p.session)]);
+ assert.deepEqual(responses.map(r=>r.statusCode).sort(),[200,409]);
+ assert.equal(value(responses.find(r=>r.statusCode===409)!).error.details.cardRevision,1);
+});
+test('deadline locks atomically; reveal embargo, audited results, correction and final history',async()=>{
+ const s=await setup();const p=await s.joinPlayer('A');
+ await s.call('PUT','/api/contests/week/me/pick-card',{...s.card,expectedCardRevision:0},p.session);
+ const base='/api/contests/week/game-day';
+ assert.equal(value(await s.call('GET',base)).board,undefined);
+ s.advance();
+ assert.equal((await s.call('PUT','/api/contests/week/me/pick-card',{...s.card,expectedCardRevision:1},p.session)).statusCode,409);
+ let view=value(await s.call('GET',base));assert.equal(view.contest.phase,'REVEAL');assert.deepEqual(view.reveal.groups,[]);assert.equal(view.board,undefined);
+ assert.equal((await s.call('POST',base+'/advance',{expectedVersion:view.contest.version})).statusCode,401);
+ assert.equal((await s.call('POST',base+'/advance',{expectedVersion:0},s.admin)).statusCode,409);
+ for(let step=1;step<=6;step++) {
+  assert.equal((await s.call('POST',base+'/advance',{expectedVersion:view.contest.version},s.admin)).statusCode,200);
+  view=value(await s.call('GET',base));
+  if(step<6){assert.equal(view.board,undefined);if(step<5)assert.ok(view.reveal.groups.every((g:any)=>!['winner','first','play','half','total'].includes(g.slotId)));}
+ }
+ assert.equal(view.contest.phase,'LIVE');assert.equal(view.board.entries[0].picks.length,15);
+ const result=async(gameId:string,fact:unknown)=>{
+  view=value(await s.call('GET',base));return s.call('POST',base+'/result',{expectedVersion:view.contest.version,gameId,fact,reason:'Synthetic test observation'},s.admin);
+ };
+ assert.equal((await result('g1',{status:'FINAL',home:7,away:10,firstTeam:'wrong'})).statusCode,422);
+ for(const g of s.c.games) assert.equal((await result(g.id,{status:'FINAL',home:31,away:27,...(g.id==='main'?{firstTeam:'main-home',firstScore:'TOUCHDOWN',halftime:'TIE'}:{})})).statusCode,200);
+ view=value(await s.call('GET',base)); const points=view.board.entries[0].points;
+ assert.equal((await result('g1',{status:'FINAL',home:7,away:10})).statusCode,200);
+ view=value(await s.call('GET',base));assert.notEqual(view.board.entries[0].points,points);
+ assert.equal((await s.call('POST',base+'/finalize',{expectedVersion:view.contest.version},s.admin)).statusCode,200);
+ view=value(await s.call('GET',base));assert.equal(view.contest.phase,'FINAL');assert.equal(view.board.champions.length,1);
+ const stored=(await s.store.read()).contests.week!;assert.ok(stored.gameDay?.final);assert.ok(stored.dayAudit!.length>=15);
+ assert.equal((await result('g1',{status:'VOID'})).statusCode,422);
+});

@@ -55,6 +55,19 @@ test('DynamoDB Local: API joins, atomic session exchange, cards, privacy, denial
     at = new Date('2026-09-12T16:00:00Z');
     assert.equal((await call('PUT','/api/contests/week/me/pick-card',{...card,expectedCardRevision:2},session)).statusCode,409);
     assert.equal((await call('POST','/api/contests/week/join-requests',{displayName:'Late'})).statusCode,409);
+    let day=body(await call('GET','/api/contests/week/game-day'));
+    assert.equal(day.contest.phase,'REVEAL');assert.equal(day.board,undefined);
+    for(let step=0;step<6;step++) {
+      assert.equal((await call('POST','/api/contests/week/game-day/advance',{expectedVersion:day.contest.version},admin)).statusCode,200);
+      day=body(await call('GET','/api/contests/week/game-day'));
+    }
+    assert.equal(day.board.entries[0].picks.length,15);
+    for(const g of c.games) {
+      assert.equal((await call('POST','/api/contests/week/game-day/result',{expectedVersion:day.contest.version,gameId:g.id,fact:{status:'VOID'},reason:'Synthetic cancellation'},admin)).statusCode,200);
+      day=body(await call('GET','/api/contests/week/game-day'));
+    }
+    assert.equal((await call('POST','/api/contests/week/game-day/finalize',{expectedVersion:day.contest.version},admin)).statusCode,200);
+    assert.ok((await repository.getSnapshot('week')).gameDay?.final);
     await repository.revokeSession(session.split('=')[1]!);
     assert.equal((await call('GET','/api/contests/week/me/pick-card',undefined,session)).statusCode,401);
   } finally { await client.send(new DeleteTableCommand({TableName:table})); client.destroy(); }

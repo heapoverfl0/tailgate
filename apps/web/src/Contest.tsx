@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+import {GameDay} from './GameDay';
 import contestQr from './contest-qr.json';
 import type { ContestConfiguration, PickCard, PickChoice } from '../../../packages/domain/src/index';
 
 type Card = PickCard & { cardRevision: number; submissionStatus: string; validation: { complete: boolean } };
 type View = { contest: { name: string; lockAt: string; phase: string; lockedAt?: string }; configuration: ContestConfiguration; participants: { participantId: string; displayName: string; attendance: string; submissionStatus: string; completedSelections: number }[] };
 class RequestError extends Error { constructor(public code: string, public details?: Card) { super(code.replaceAll('_', ' ').toLowerCase()); } }
-async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+export async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   const response = await fetch(`/api${path}`, { method, credentials: 'same-origin', headers: { 'content-type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(20000) });
   const data = await response.json();
   if (!response.ok) throw new RequestError(data.error?.code ?? 'REQUEST_FAILED', data.error?.details);
@@ -14,7 +15,7 @@ async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> 
 const describe = (e: unknown) => e instanceof RequestError ? e.message : 'Connection failed. Please try again.';
 const categories = { CONFIDENCE: 'Confidence', ATS: 'Against the spread', UPSET_SPECIAL: 'Upset Special', MAIN_EVENT: 'Main Event' };
 
-function choiceLabel(choice: PickChoice, config: ContestConfiguration): string {
+export function choiceLabel(choice: PickChoice, config: ContestConfiguration): string {
   if (choice.kind === 'NO_UPSET') return 'No upset — guaranteed 1 point';
   const parameters = config.propositions.find(p => p.id === choice.propositionId)?.parameters;
   let label = choice.outcome.kind === 'TEAM' ? choice.outcome.teamId : choice.outcome.kind === 'TOTAL_SIDE' ? choice.outcome.side : choice.outcome.kind === 'SCORE_TYPE' ? choice.outcome.scoreType.replaceAll('_', ' ') : 'Tie';
@@ -103,15 +104,16 @@ export function Contest({ id }: { id: string }) {
   const confidenceOwner = (n: number) => confidenceSlots.find(s => draft.picks.some(p => p.slotId === s.id && p.confidence === n));
   const availableConfidence = [1,2,3,4,5,6].filter(n => !confidenceOwner(n));
   const minutes = Math.max(0, Math.ceil((Date.parse(view.contest.lockAt) - now) / 60000));
-  return <main className={display ? 'display' : ''}><div className="eyebrow">{locked ? 'PICKS CLOSED' : `LOCKS IN ${Math.floor(minutes/60)}H ${minutes%60}M`} · {id}</div><h1>{view.contest.name}</h1><p className="intro">{locked ? 'Your card is frozen. Picks remain private until the reveal.' : 'Your picks stay private. Submit when complete; edit until lock.'}</p>
+  return <main className={display ? 'display' : ''}><div className="eyebrow">{locked ? 'PICKS CLOSED' : `LOCKS IN ${Math.floor(minutes/60)}H ${minutes%60}M`} · {id}</div><h1>{view.contest.name}</h1><p className="intro">{locked ? (['LIVE','MAIN_EVENT','FINAL'].includes(view.contest.phase) ? 'Picks are public. Follow the standings below.' : 'Your card is frozen. Picks remain private until the reveal.') : 'Your picks stay private. Submit when complete; edit until lock.'}</p>
     <nav><a href={`/?contest=${encodeURIComponent(id)}${display ? '' : '&display=1'}`}>{display ? 'Participant view' : 'Shared display ↗'}</a></nav>
-    {display && <section className="join-display" aria-label="Join this contest">
+    {display && !locked && <section className="join-display" aria-label="Join this contest">
       {qrAvailable && <a href={joinUrl} aria-label="Open this contest to join"><img src={`/qr/${encodeURIComponent(id)}.png`} alt={`QR code to join contest ${id}`} width="300" height="300" /></a>}
       <div><h2>{qrAvailable ? 'Scan to join' : 'Join this contest'}</h2><p>{qrAvailable ? 'Open your camera, scan the code, and request to join.' : 'Open the link below and request to join.'}</p><p>Contest code: <strong>{id}</strong></p><a href={joinUrl}>{joinUrl}</a></div>
     </section>}
     {error && <p className="error" role="alert">{error}</p>}{message && <p className="notice" role="status">{message}</p>}
     <section className="players"><h2>The crew <small>{view.participants.length} playing</small></h2>{view.participants.length === 0 ? <p>No players yet. Be the first to make a questionable prediction.</p> : view.participants.map(p=><article key={p.participantId}><strong>{p.displayName}</strong><span>{p.attendance === 'REMOTE' ? 'Remote' : 'On site'}</span><b>{p.submissionStatus === 'SUBMITTED' ? 'Submitted' : `${p.completedSelections} / 15 picks`}</b></article>)}</section>
     {!display && !card && <section className="entry"><h2>Get in the game</h2>{join ? <p role="status">Waiting for commissioner approval. Keep this tab open.</p> : locked ? <p>This contest is closed to new players.</p> : <form onSubmit={e=>{e.preventDefault(); void action(async()=>{const r=await api<{requestId:string;requestSecret:string}>(`${base}/join-requests`,'POST',{displayName:name});setJoin(r);try{sessionStorage.setItem(`tailgate-join-${id}`,JSON.stringify(r));}catch{}});}}><label htmlFor="name">Your name</label><div className="inline"><input id="name" required maxLength={80} value={name} onChange={e=>setName(e.target.value)}/><button disabled={busy}>Request to join</button></div></form>}</section>}
+    <GameDay id={id} config={view.configuration} admin={admin}/>
     {!display && card && <section className="pick-card"><h2>Your card <small>{card.submissionStatus === 'SUBMITTED' ? 'Submitted' : 'Draft'}</small></h2>
       {Object.entries(categories).map(([category,label])=><fieldset key={category} disabled={busy || locked}><legend>{label}</legend>{category==='CONFIDENCE' && <><p>Pick straight-up winners. Use each confidence value from 1 to 6 once. Six is your strongest pick.</p><p role="status"><strong>Available: {availableConfidence.length ? availableConfidence.join(', ') : 'All values assigned'}</strong></p>{card.submissionStatus==='SUBMITTED' && <p>Choose a used value to swap it with that game and keep your submitted card complete.</p>}</>}{view.configuration.slots.filter(s=>s.category===category).map(slot=>{
         const pick=draft.picks.find(p=>p.slotId===slot.id);

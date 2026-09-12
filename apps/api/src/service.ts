@@ -2,7 +2,7 @@ import { parseConfiguration } from './configuration-input.js';
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import type { StoredContest } from '../../../packages/persistence/src/store.js';
 import { RepositoryError, assertOpen, verifyJoinSecret, type Repository } from '../../../packages/persistence/src/repository.js';
-import { validateCard, type Contest, type ContestConfiguration, type PickCard } from '../../../packages/domain/src/index.js';
+import { revealView, standings, validateCard, type Contest, type ContestConfiguration, type PickCard } from '../../../packages/domain/src/index.js';
 export interface ApiRequest { method: string; path: string; body?: unknown; headers?: Record<string, string | undefined> }
 export interface ApiResponse { statusCode: number; body: unknown; cookies?: string[] }
 export interface ApiSettings { origin: string; password: string; signingSecret: string; secureCookies: boolean; now?: () => Date }
@@ -72,6 +72,29 @@ export function createService(repository: Repository, settings: ApiSettings) {
       const route = /^\/api\/contests\/([a-zA-Z0-9_-]+)(?:\/(.*))?$/.exec(req.path);
       if (!route || !safeId(route[1])) return fail(404, 'NOT_FOUND');
       const id = route[1]!; const action = route[2] ?? '';
+      if(action.startsWith('me/')) await participant(req,id);
+      if(req.method==='POST' && action.startsWith('game-day/')) commissioner(req);
+      let snapshot = await repository.getSnapshot(id);
+      if(snapshot.contest.phase==='PREGAME' && now().getTime()>=Date.parse(snapshot.contest.lockAt)) {
+        try { snapshot=await repository.updateDay(id,snapshot.contest.version,'lock',{}); }
+        catch(e) { if(e instanceof RepositoryError && e.code==='CONTEST_VERSION_CONFLICT') snapshot=await repository.getSnapshot(id); else throw e; }
+      }
+      if(req.method==='GET' && action==='game-day') {
+        const publicPicks=['LIVE','MAIN_EVENT','FINAL'].includes(snapshot.contest.phase);
+        return {statusCode:200,body:{contest:snapshot.contest, reveal:snapshot.contest.phase==='REVEAL'?revealView(snapshot):undefined,
+          ...(publicPicks?{board:snapshot.gameDay?.final??standings(snapshot),games:snapshot.gameDay?.games??{}}:{})}};
+      }
+      if(req.method==='POST' && action.startsWith('game-day/')) {
+        commissioner(req); const body=bodyObject(req.body);
+        if(!Number.isSafeInteger(body.expectedVersion)) return fail(400,'INVALID_REVISION');
+        try {
+          const updated=await repository.updateDay(id,body.expectedVersion as number,action.slice('game-day/'.length),body);
+          return {statusCode:200,body:{contest:updated.contest}};
+        } catch(e) {
+          if(['INVALID_RESULT','INVALID_ACTION','NOT_READY'].includes((e as Error).message)) return fail(422,(e as Error).message);
+          throw e;
+        }
+      }
       if (req.method === 'GET' && (action === '' || action === 'pregame')) {
         const c = await repository.getSnapshot(id);
         return { statusCode: 200, body: { contest: c.contest, configuration: c.configuration, participants: Object.values(c.participants).map(p => {
@@ -149,7 +172,7 @@ export function createService(repository: Repository, settings: ApiSettings) {
       return fail(404, 'NOT_FOUND');
     } catch (error) {
       if (error instanceof RepositoryError) {
-        const statuses: Record<string, number> = { NOT_FOUND: 404, UNAUTHENTICATED: 401, FORBIDDEN: 403, LOCKED: 409, CONTEST_EXISTS: 409, JOIN_ALREADY_HANDLED: 409, TOO_MANY_REQUESTS: 429, SNAPSHOT_BUSY: 503, TRANSACTION_RETRY_REQUIRED: 503 };
+        const statuses: Record<string, number> = { CONTEST_VERSION_CONFLICT: 409, NOT_FOUND: 404, UNAUTHENTICATED: 401, FORBIDDEN: 403, LOCKED: 409, CONTEST_EXISTS: 409, JOIN_ALREADY_HANDLED: 409, TOO_MANY_REQUESTS: 429, SNAPSHOT_BUSY: 503, TRANSACTION_RETRY_REQUIRED: 503 };
         const statusCode = statuses[error.code];
         if (statusCode) return { statusCode, body: { error: { code: error.code, message: error.code } } };
       }

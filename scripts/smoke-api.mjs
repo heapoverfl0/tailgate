@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand, DeleteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { fixture } from '../dist/packages/domain/src/fixture.js';
 import { keys } from '../dist/packages/persistence/src/dynamo.js';
 
@@ -73,7 +73,31 @@ try {
     for (const p of view.participants) { assert.equal(p.picks, undefined); assert.equal(p.prediction, undefined); }
     assert.equal(view.participants.find(p => p.displayName === 'Synthetic A').completedSelections, 15);
   }
-  console.log('HTTPS smoke passed: health, login, origin guard, approval, sessions, save, conflict, submit, and pick privacy');
+  const race=await Promise.all([1,2].map(async()=>{
+    const response=await fetch(origin+`${base}/me/pick-card`,{method:'PUT',headers:{origin,'content-type':'application/json',cookie:a},body:JSON.stringify({...card,expectedCardRevision:2}),signal:AbortSignal.timeout(20000)});
+    return response.status;
+  }));
+  assert.deepEqual(race.sort(),[200,409]);
+  // Advance ONLY this uniquely named synthetic contest's deadline; never touch real contests.
+  assert.ok(id.startsWith('smoke-'));
+  await client.send(new UpdateCommand({TableName:'tailgate',Key:keys.contest(id),UpdateExpression:'SET lockAtMs = :ms, #d.#lock = :lock, #d.#v = #d.#v + :one',ConditionExpression:'#d.#id = :id AND #d.#phase = :pregame',ExpressionAttributeNames:{'#d':'data','#lock':'lockAt','#v':'version','#id':'id','#phase':'phase'},ExpressionAttributeValues:{':ms':Date.now()-1000,':lock':new Date(Date.now()-1000).toISOString(),':one':1,':id':id,':pregame':'PREGAME'}}));
+  await call('PUT',`${base}/me/pick-card`,{...card,expectedCardRevision:3},a,409);
+  let day=(await call('GET',`${base}/game-day`)).body;
+  assert.equal(day.contest.phase,'REVEAL');assert.equal(day.board,undefined);assert.deepEqual(day.reveal.groups,[]);
+  await call('POST',`${base}/game-day/advance`,{expectedVersion:day.contest.version},'',401);
+  for(let step=0;step<6;step++){
+    await call('POST',`${base}/game-day/advance`,{expectedVersion:day.contest.version},admin);
+    day=(await call('GET',`${base}/game-day`)).body;
+    if(step<5)assert.equal(day.board,undefined);
+  }
+  assert.equal(day.board.entries.find(e=>e.displayName==='Synthetic A').picks.length,15);
+  for(const g of c.games){
+    await call('POST',`${base}/game-day/result`,{expectedVersion:day.contest.version,gameId:g.id,fact:{status:'FINAL',home:31,away:27,...(g.id===c.mainEventGameId?{firstTeam:g.homeTeamId,firstScore:'TOUCHDOWN',halftime:'TIE'}:{})},reason:'Synthetic deployment test'},admin);
+    day=(await call('GET',`${base}/game-day`)).body;
+  }
+  await call('POST',`${base}/game-day/finalize`,{expectedVersion:day.contest.version},admin);
+  day=(await call('GET',`${base}/game-day`)).body;assert.equal(day.contest.phase,'FINAL');assert.equal(day.board.champions.length,1);
+  console.log('HTTPS smoke passed: pregame privacy, concurrent edits, deadline lock, Reveal embargo, results and final standings');
 } finally {
   // Only exact keys belonging to this unique synthetic contest are removed.
   const items = await query(`CONTEST#${id}`);

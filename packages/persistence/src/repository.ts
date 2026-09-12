@@ -1,11 +1,12 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { prepareCardSave, type Contest, type ContestConfiguration, type ContestParticipant } from '../../domain/src/index.js';
+import { changeDay, prepareCardSave, type Contest, type ContestConfiguration, type ContestParticipant } from '../../domain/src/index.js';
 import type { Store, StoredContest, JoinRequest, ParticipantSession } from './store.js';
 export class RepositoryError extends Error {
   constructor(readonly code: string, readonly canonical?: unknown) { super(code); }
 }
 export interface CardWrite { contestId: string; participantId: string; expectedCardRevision: number; card?: unknown; submit?: boolean }
 export interface Repository {
+  updateDay(id: string, expectedVersion: number, action: string, body: Record<string,unknown>): Promise<StoredContest>;
   createContest(contest: Contest, config: ContestConfiguration): Promise<void>;
   getSnapshot(id: string): Promise<StoredContest>;
   createJoin(request: JoinRequest): Promise<void>;
@@ -33,6 +34,15 @@ export class StoreRepository implements Repository {
     await this.store.transact(s => { if (own(s.contests, contest.id)) throw new RepositoryError('CONTEST_EXISTS');
       if (Date.parse(contest.lockAt) <= this.now().getTime()) throw new RepositoryError('LOCKED');
       s.contests[contest.id] = { contest, configuration, participants: {}, cards: {} };
+    });
+  }
+  async updateDay(id: string, expectedVersion: number, action: string, body: Record<string,unknown>) {
+    return this.store.transact(state=>{
+      const c=this.contest(state,id);
+      if(c.contest.version!==expectedVersion) throw new RepositoryError('CONTEST_VERSION_CONFLICT');
+      const at=this.now().toISOString();
+      changeDay(c,action,body,at);c.contest.version++;
+      (c.dayAudit??=[]).push({at,action,body:structuredClone(body)});return c;
     });
   }
   async listJoins(id: string) { const s = await this.store.read(); this.contest(s, id); return Object.values(s.joins).filter(j => j.contestId === id); }

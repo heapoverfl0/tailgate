@@ -144,3 +144,15 @@ test('missing final-score prediction never beats a valid prediction when actual 
   assert.deepEqual(champions([{ participantId: 'a', points: 10 }, { participantId: 'b', points: 10, prediction: { home: 1, away: 1 } }], { home: 0, away: 0 }), ['b']);
   assert.deepEqual(champions([{ participantId: 'a', points: 10 }, { participantId: 'b', points: 10 }], { home: 0, away: 0 }), ['a','b']);
 });
+
+test('manual game facts resolve correlated outcomes and total ties void for everyone',async()=>{
+ const {resolutions,parseGameFact}=await import('./game-day.js');
+ const {c}=fixture();const total=c.propositions.find(p=>p.id==='total')!;total.parameters={kind:'GAME_TOTAL',total:58};
+ const results=resolutions(c,{g1:{status:'FINAL',home:30,away:27},main:{status:'FINAL',home:31,away:27,firstTeam:'main-away',firstScore:'FIELD_GOAL',halftime:'TIE'}});
+ assert.deepEqual(results.a1,{status:'PUSH'});assert.deepEqual(results.total,{status:'VOID'});
+ assert.deepEqual(results.winner,{status:'RESOLVED',outcome:{kind:'TEAM',teamId:'main-home'}});
+ assert.deepEqual(results.half,{status:'RESOLVED',outcome:{kind:'TIE'}});
+ assert.throws(()=>parseGameFact(c,'main',{status:'FINAL',home:31}),/INVALID_RESULT/);
+ assert.throws(()=>parseGameFact(c,'main',{status:'IN_PROGRESS',firstTeam:'main-home'}),/INVALID_RESULT/);
+ assert.deepEqual(resolutions(c,{main:{status:'VOID'}}).total,{status:'VOID'});
+});

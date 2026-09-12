@@ -3,7 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, QueryCommand, TransactWriteCommand, DeleteCommand,
   type TransactWriteCommandInput } from '@aws-sdk/lib-dynamodb';
-import { freezeConfiguration, prepareCardSave, type Contest, type ContestConfiguration, type ContestParticipant, type PickCard, type Selection } from '../../domain/src/index.js';
+import { changeDay, freezeConfiguration, prepareCardSave, type Contest, type ContestConfiguration, type ContestParticipant, type PickCard, type Selection } from '../../domain/src/index.js';
 import type { StoredContest, ParticipantSession, JoinRequest } from './store.js';
 
 export interface Key { PK: string; SK: string }
@@ -51,7 +51,7 @@ export function decodeContest(items: Item[]): StoredContest {
     if (!card) throw new Error('Orphan persisted pick');
     card.picks.push(item.data);
   }
-  return { contest: meta.data, configuration: config, participants, cards };
+  return { contest: meta.data, configuration: config, participants, cards, ...(meta.gameDay ? {gameDay:meta.gameDay} : {}) };
 }
 const protect = (table: string, key: Key, now: number): Action => ({ Update: {
   TableName: table, Key: key, UpdateExpression: 'SET #d.#v = #d.#v + :one',
@@ -130,6 +130,22 @@ export class DynamoContestRepository implements Repository {
       if (after?.data.version === before.data.version) return decodeContest(items);
     }
     throw new RepositoryError('SNAPSHOT_BUSY');
+  }
+  async updateDay(id: string, expectedVersion: number, action: string, body: Record<string,unknown>): Promise<StoredContest> {
+    const c=await this.getSnapshot(id);
+    if(c.contest.version!==expectedVersion) throw new RepositoryError('CONTEST_VERSION_CONFLICT');
+    const at=this.now().toISOString(); changeDay(c,action,body,at); c.contest.version++;
+    try {
+      await this.client.send(new TransactWriteCommand({ClientRequestToken:randomUUID(),TransactItems:[
+        {Update:{TableName:this.table,Key:keys.contest(id),UpdateExpression:'SET #d = :d, #day = :day',ConditionExpression:'#d.#v = :expected',ExpressionAttributeNames:{'#d':'data','#v':'version','#day':'gameDay'},ExpressionAttributeValues:{':d':c.contest,':day':c.gameDay,':expected':expectedVersion}}},
+        {Put:{TableName:this.table,Item:{PK:keys.contest(id).PK,SK:`AUDIT#${c.contest.version}`,data:{at,action,body,actor:'COMMISSIONER_OR_SERVER'}},ConditionExpression:'attribute_not_exists(PK)'}},
+      ]}));
+    } catch(error) {
+      const e=error as {name?:string;CancellationReasons?:{Code?:string}[]};
+      if(e.name==='TransactionCanceledException' && e.CancellationReasons?.some(r=>r.Code==='ConditionalCheckFailed')) throw new RepositoryError('CONTEST_VERSION_CONFLICT');
+      throw error;
+    }
+    return c;
   }
   async addParticipant(participant: ContestParticipant): Promise<void> {
     if (participant.cardRevision !== 0 || participant.submissionStatus !== 'DRAFT' || participant.status !== 'ACTIVE') throw new Error('Invalid new participant');
