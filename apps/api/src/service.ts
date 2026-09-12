@@ -44,6 +44,16 @@ export function createService(repository: Repository, settings: ApiSettings) {
     const { complete, missingSlotIds, predictionMissing } = validateCard(c.configuration, card);
     return { ...card, contestVersion: c.contest.version, cardRevision: p.cardRevision, submissionStatus: p.submissionStatus, validation: { complete, missingSlotIds, predictionMissing } };
   };
+  // Public read models only; a new persisted version always invalidates the entry.
+  const boards=new Map<string,{version:number;board:ReturnType<typeof standings>}>();
+  const boardFor=(snapshot:StoredContest)=>{
+    if(snapshot.gameDay?.final)return snapshot.gameDay.final;
+    const id=snapshot.contest.id;const cached=boards.get(id);
+    if(cached?.version===snapshot.contest.version)return structuredClone(cached.board);
+    const board=standings(snapshot);boards.delete(id);
+    if(boards.size>=8)boards.delete(boards.keys().next().value!);
+    boards.set(id,{version:snapshot.contest.version,board});return structuredClone(board);
+  };
   const loginAttempts: number[] = [];
   return async (req: ApiRequest): Promise<ApiResponse> => {
     try {
@@ -82,7 +92,7 @@ export function createService(repository: Repository, settings: ApiSettings) {
       if(req.method==='GET' && action==='game-day') {
         const publicPicks=['LIVE','MAIN_EVENT','FINAL'].includes(snapshot.contest.phase);
         return {statusCode:200,body:{contest:snapshot.contest, reveal:snapshot.contest.phase==='REVEAL'?revealView(snapshot):undefined,
-          ...(publicPicks?{board:snapshot.gameDay?.final??standings(snapshot),games:snapshot.gameDay?.games??{},overrideGameIds:Object.keys(snapshot.gameDay?.overrides??snapshot.gameDay?.games??{}),providerUpdatedAt:snapshot.gameDay?.providerUpdatedAt}:{})}};
+          ...(publicPicks?{board:boardFor(snapshot),games:snapshot.gameDay?.games??{},overrideGameIds:Object.keys(snapshot.gameDay?.overrides??snapshot.gameDay?.games??{}),providerUpdatedAt:snapshot.gameDay?.providerUpdatedAt}:{})}};
       }
       if(req.method==='POST' && action.startsWith('game-day/')) {
         commissioner(req); const body=bodyObject(req.body);

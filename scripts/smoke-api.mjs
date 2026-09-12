@@ -91,10 +91,14 @@ try {
     if(step<5)assert.equal(day.board,undefined);
   }
   assert.equal(day.board.entries.find(e=>e.displayName==='Synthetic A').picks.length,15);
+  assert.ok(day.board.entries.every(e=>e.projectedPoints===e.points&&Number.isFinite(e.remainingPoints)));
+  assert.ok(day.board.paths.every(p=>p.status==='PENDING_EARLIER_GAMES'));
   for(const g of c.games){
     await call('POST',`${base}/game-day/result`,{expectedVersion:day.contest.version,gameId:g.id,fact:{status:'FINAL',home:31,away:27,...(g.id===c.mainEventGameId?{firstTeam:g.homeTeamId,firstScore:'TOUCHDOWN',halftime:'TIE'}:{})},reason:'Synthetic deployment test'},admin);
     day=(await call('GET',`${base}/game-day`)).body;
   }
+  assert.ok(day.board.entries.every(e=>e.projectedPoints===e.points&&e.remainingPoints===0));
+  assert.ok(day.board.paths.every(p=>p.status==='RESOLVED'));
   await call('POST',`${base}/game-day/finalize`,{expectedVersion:day.contest.version},admin);
   day=(await call('GET',`${base}/game-day`)).body;assert.equal(day.contest.phase,'FINAL');assert.equal(day.board.champions.length,1);
   console.log('HTTPS smoke passed: pregame privacy, concurrent edits, deadline lock, Reveal embargo, results and final standings');

@@ -156,3 +156,46 @@ test('manual game facts resolve correlated outcomes and total ties void for ever
  assert.throws(()=>parseGameFact(c,'main',{status:'IN_PROGRESS',firstTeam:'main-home'}),/INVALID_RESULT/);
  assert.deepEqual(resolutions(c,{main:{status:'VOID'}}).total,{status:'VOID'});
 });
+
+
+test('live projection ignores scheduled games, banks NO_UPSET once, and projects ATS pushes',async()=>{
+ const {liveProjection}=await import('./projections.js');const {resolutions}=await import('./game-day.js');const {c}=fixture();
+ const card={picks:[{slotId:'a1',choiceId:'a1-0'},{slotId:'upset',choiceId:'coward'}]};
+ assert.deepEqual(liveProjection(c,card,{},{}),{projectedPoints:1,remainingPoints:2});
+ const games={g1:{status:'IN_PROGRESS' as const,home:10,away:7}};
+ assert.deepEqual(liveProjection(c,card,resolutions(c,games),games),{projectedPoints:2,remainingPoints:2});
+ games.g1.home=14;assert.equal(liveProjection(c,card,resolutions(c,games),games).projectedPoints,3);
+ assert.deepEqual(liveProjection(c,card,{a1:{status:'VOID'}},games),{projectedPoints:1,remainingPoints:0});
+});
+test('resolved first score stays banked; missing live scores do not fabricate projections',async()=>{
+ const {liveProjection}=await import('./projections.js');const {c,card}=fixture();
+ const picks={picks:card.picks.filter(p=>['first','winner','total'].includes(p.slotId))};
+ assert.deepEqual(liveProjection(c,picks,{first:{status:'RESOLVED',outcome:{kind:'TEAM',teamId:'main-home'}}},{main:{status:'IN_PROGRESS'}}),{projectedPoints:1,remainingPoints:2});
+});
+test('winning paths wait for earlier results, handle missing resolutions, and stop after resolution',async()=>{
+ const {mainEventPaths}=await import('./projections.js');const {c,card,results}=fixture();const e=[{participantId:'p',points:0,picks:card.picks}];
+ assert.equal(mainEventPaths(c,e,{}, {})[0]!.status,'PENDING_EARLIER_GAMES');
+ assert.equal(mainEventPaths(c,e,results,{})[0]!.status,'RESOLVED');
+});
+test('winning paths honor actual score bounds and prediction tiebreaks including cochampions',async()=>{
+ const {mainEventPaths}=await import('./projections.js');const {c,card,results}=fixture();results.first={status:'UNRESOLVED'};
+ const entries=[{participantId:'a',points:20,picks:card.picks,prediction:{home:31,away:27}},{participantId:'b',points:20,picks:card.picks,prediction:{home:0,away:0}},{participantId:'c',points:20,picks:card.picks,prediction:{home:31,away:27}}];
+ const paths=mainEventPaths(c,entries,results,{main:{status:'FINAL',home:31,away:27}});
+ assert.deepEqual(paths.map(p=>p.status),['ALIVE','NO_PATH','ALIVE']);assert.equal(paths[0]!.example!.coChampion,true);assert.equal(paths[0]!.example!.home,31);
+});
+test('winning path example scores consistently with the authoritative resolver',async()=>{
+ const {mainEventPaths}=await import('./projections.js');const {resolutions}=await import('./game-day.js');const {c,card,results}=fixture();
+ for(const p of c.propositions.filter(p=>p.gameId==='main'))results[p.id]={status:'UNRESOLVED'};
+ const points=scoreCard(c,card,results).points;const paths=mainEventPaths(c,[{participantId:'p',points,picks:card.picks,prediction:card.prediction}],results,{main:{status:'IN_PROGRESS',home:14,away:7,period:2}});
+ const ex=paths[0]!.example!;assert.ok(ex.home>=14&&ex.away>=7);
+ const simulated=resolutions(c,{main:{status:'FINAL',home:ex.home,away:ex.away,firstTeam:ex.firstTeam!,firstScore:ex.firstScore as 'TOUCHDOWN',halftime:ex.halftime!}});
+ const merged={...results};for(const p of c.propositions.filter(p=>p.gameId==='main'))merged[p.id]=simulated[p.id]!;
+ assert.equal(scoreCard(c,card,merged).points,ex.points);
+});
+
+test('missing halftime fact is not projected from a second-half lead',async()=>{
+ const {liveProjection}=await import('./projections.js');const {c}=fixture();
+ const card={picks:[{slotId:'half',choiceId:'half-0'}]};
+ assert.deepEqual(liveProjection(c,card,{}, {main:{status:'IN_PROGRESS',home:21,away:7,period:3}}),{projectedPoints:0,remainingPoints:1});
+ assert.equal(liveProjection(c,card,{}, {main:{status:'IN_PROGRESS',home:21,away:7,period:2}}).projectedPoints,1);
+});

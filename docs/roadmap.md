@@ -36,3 +36,8 @@ M5: Final, historical results from the first completed contest, presentation pol
 Dependency review and installation succeeded September 9, 2026. The private Terraform state bucket and DynamoDB table are deployed in personal account 965984382163 (us-east-2). Bootstrap state is migrated to S3. API cloud deployment and HTTPS integration checks pass.
 
 The subsequent [CFBD integration](cfbd-integration.md) adds automated scoreboard/play polling and a separate override layer for the revised contest. It supersedes the earlier manual-only/provider-pending status; advanced projections and directors remain pending.
+
+
+## Projections and Main Event paths — September 11, 2026
+
+Live standings now include banked points, projected points/rank and unresolved pick exposure. After earlier propositions resolve, Main Event example paths include the final-score tiebreak and co-champions. See [projection model](projections.md). This is a bounded Main Event model; full earlier-game correlated potential, advanced directors, AppSync push and expanded historical analytics remain future work.

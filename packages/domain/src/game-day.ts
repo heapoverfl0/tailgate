@@ -1,4 +1,5 @@
 import type { Contest, ContestConfiguration, ContestParticipant, PickCard, Resolution, ScorePrediction } from './model.js';
+import {liveProjection,mainEventPaths} from './projections.js';
 import { scoreCard, champions } from './scoring.js';
 export interface GameFact {
   status: 'SCHEDULED' | 'IN_PROGRESS' | 'FINAL' | 'VOID';
@@ -39,11 +40,11 @@ export function standings(s: DaySnapshot) {
   const results=resolutions(s.configuration,s.gameDay?.games??{});
   const entries=Object.values(s.participants).filter(p=>p.status==='ACTIVE').map(p=>{
     const card=s.cards[p.participantId]!; const scored=scoreCard(s.configuration,card,results);
-    return {participantId:p.participantId,displayName:p.displayName,attendance:p.attendance,points:scored.points,grades:scored.picks,picks:card.picks,...(card.prediction?{prediction:card.prediction}:{})};
+    return {participantId:p.participantId,displayName:p.displayName,attendance:p.attendance,points:scored.points,...liveProjection(s.configuration,card,results,s.gameDay?.games??{}),grades:scored.picks,picks:card.picks,...(card.prediction?{prediction:card.prediction}:{})};
   }).sort((a,b)=>b.points-a.points || a.displayName.localeCompare(b.displayName));
   const main=s.gameDay?.games[s.configuration.mainEventGameId];
   const actual: ScorePrediction|undefined=main?.status==='FINAL'?{home:main.home!,away:main.away!}:undefined;
-  return {entries:entries.map(e=>({...e,rank:1+entries.filter(other=>other.points>e.points).length})),results,champions:champions(entries,actual)};
+  return {entries:entries.map(e=>({...e,rank:1+entries.filter(other=>other.points>e.points).length,projectedRank:1+entries.filter(other=>other.projectedPoints>e.projectedPoints).length})),results,paths:mainEventPaths(s.configuration,entries,results,s.gameDay?.games??{}),champions:champions(entries,actual)};
 }
 export function parseGameFact(c: ContestConfiguration, gameId: string, value: unknown): GameFact {
   const game=c.games.find(g=>g.id===gameId);
