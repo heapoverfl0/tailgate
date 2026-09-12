@@ -51,3 +51,5 @@ The mockup-based [shared Live presentation](shared-live-presentation.md) is impl
 The [Main Event participant presentation](main-event-presentation.md) is implemented, locally verified and deployed following explicit approval. The commissioner runbook is also deployed and linked from the Commissioner section. It adds personal picks, day standings and explicitly bounded winning-path examples.
 
 The [Final presentation](final-presentation.md) is implemented, verified and deployed following explicit approval. It includes champion/co-champions, final standings and result-based unofficial awards.
+
+The [Pregame shared presentation](pregame-presentation.md) is implemented and locally verified, pending deployment.

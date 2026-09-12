@@ -1,10 +1,11 @@
+import {PregameDisplay} from './PregameDisplay';
 import { useEffect, useRef, useState } from 'react';
 import {GameDay} from './GameDay';
 import contestQr from './contest-qr.json';
 import type { ContestConfiguration, PickCard, PickChoice } from '../../../packages/domain/src/index';
 
 type Card = PickCard & { participantId: string; cardRevision: number; submissionStatus: string; validation: { complete: boolean } };
-type View = { contest: { name: string; lockAt: string; phase: string; lockedAt?: string }; configuration: ContestConfiguration; participants: { participantId: string; status: string; displayName: string; attendance: string; submissionStatus: string; completedSelections: number }[] };
+export type View = { contest: { name: string; lockAt: string; phase: string; lockedAt?: string }; configuration: ContestConfiguration; participants: { participantId: string; status: string; displayName: string; attendance: string; submissionStatus: string; completedSelections: number }[] };
 class RequestError extends Error { constructor(public code: string, public details?: Card) { super(code.replaceAll('_', ' ').toLowerCase()); } }
 export async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   const response = await fetch(`/api${path}`, { method, credentials: 'same-origin', headers: { 'content-type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(20000) });
@@ -104,6 +105,7 @@ export function Contest({ id }: { id: string }) {
   if(display&&['LIVE','MAIN_EVENT','FINAL'].includes(view.contest.phase))return <main className="display live-shell"><GameDay id={id} config={view.configuration} admin={false} shared/></main>;
   const joinUrl = new URL(`/?contest=${encodeURIComponent(id)}`, location.origin).href;
   const qrAvailable = (contestQr as Record<string,string>)[id] === joinUrl;
+  if(display&&view.contest.phase==='PREGAME')return <main className="display live-shell"><PregameDisplay id={id} view={view} now={now} joinUrl={joinUrl} qrAvailable={qrAvailable} error={error}/></main>;
   const confidenceSlots = view.configuration.slots.filter(s => s.category === 'CONFIDENCE');
   const confidenceOwner = (n: number) => confidenceSlots.find(s => draft.picks.some(p => p.slotId === s.id && p.confidence === n));
   const availableConfidence = [1,2,3,4,5,6].filter(n => !confidenceOwner(n));
