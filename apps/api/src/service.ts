@@ -1,3 +1,4 @@
+import {revealCommentary,standingsCommentary} from '../../../packages/domain/src/commentary.js';
 import { parseConfiguration } from './configuration-input.js';
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import type { StoredContest } from '../../../packages/persistence/src/store.js';
@@ -91,8 +92,11 @@ export function createService(repository: Repository, settings: ApiSettings) {
       }
       if(req.method==='GET' && action==='game-day') {
         const publicPicks=['LIVE','MAIN_EVENT','FINAL'].includes(snapshot.contest.phase);
-        return {statusCode:200,body:{contest:snapshot.contest, reveal:snapshot.contest.phase==='REVEAL'?revealView(snapshot):undefined,
-          ...(publicPicks?{board:boardFor(snapshot),games:snapshot.gameDay?.games??{},overrideGameIds:Object.keys(snapshot.gameDay?.overrides??snapshot.gameDay?.games??{}),providerUpdatedAt:snapshot.gameDay?.providerUpdatedAt}:{})}};
+        const reveal=snapshot.contest.phase==='REVEAL'?revealView(snapshot):undefined;
+        const board=publicPicks?boardFor(snapshot):undefined;const games=snapshot.gameDay?.games??{};
+        const commentary=reveal?revealCommentary(snapshot.configuration,reveal):board?standingsCommentary(snapshot.configuration,board,games,snapshot.contest.phase==='FINAL'):undefined;
+        return {statusCode:200,body:{contest:snapshot.contest,reveal,commentary,
+          ...(board?{board,games,overrideGameIds:Object.keys(snapshot.gameDay?.overrides??games),providerUpdatedAt:snapshot.gameDay?.providerUpdatedAt}:{})}};
       }
       if(req.method==='POST' && action.startsWith('game-day/')) {
         commissioner(req); const body=bodyObject(req.body);

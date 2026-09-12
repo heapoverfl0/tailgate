@@ -199,3 +199,24 @@ test('missing halftime fact is not projected from a second-half lead',async()=>{
  assert.deepEqual(liveProjection(c,card,{}, {main:{status:'IN_PROGRESS',home:21,away:7,period:3}}),{projectedPoints:0,remainingPoints:1});
  assert.equal(liveProjection(c,card,{}, {main:{status:'IN_PROGRESS',home:21,away:7,period:2}}).projectedPoints,1);
 });
+
+
+test('Reveal commentary only uses the current public step and never hidden selections',async()=>{
+ const {revealCommentary}=await import('./commentary.js');const {revealView}=await import('./game-day.js');const {c,card}=fixture();
+ const s={contest,configuration:c,participants:{p:participant},cards:{p:card},gameDay:{revealStep:0,games:{}}};
+ const locked=revealCommentary(c,revealView(s));assert.equal(locked.id,'locked');
+ card.picks=[];assert.deepEqual(revealCommentary(c,revealView(s)),locked);
+ const {card:fresh}=fixture();s.cards.p=fresh;s.gameDay.revealStep=2;
+ const wolf=revealCommentary(c,revealView(s));assert.match(wolf.text,/Player stands alone on g1-away/);
+ fresh.picks.find(p=>p.slotId==='total')!.choiceId='total-1';assert.deepEqual(revealCommentary(c,revealView(s)),wolf);
+ s.gameDay.revealStep=3;fresh.picks.find(p=>p.slotId==='upset')!.choiceId='coward';assert.equal(revealCommentary(c,revealView(s)).id,'cowards-point');
+});
+test('live commentary requires observed trailing scores, ignores clock-only changes, and distinguishes final champions',async()=>{
+ const {standingsCommentary}=await import('./commentary.js');const {standings}=await import('./game-day.js');const {c,card}=fixture();
+ const s={contest,configuration:c,participants:{p:participant,q:{...participant,participantId:'q',displayName:'Second'}},cards:{p:card,q:structuredClone(card)},gameDay:{revealStep:6,games:{g6:{status:'IN_PROGRESS' as const,home:7,away:14,clock:'08:00'}}}};
+ const comment=()=>standingsCommentary(c,standings(s),s.gameDay.games,false)!;
+ assert.match(comment().id,/six-trailing/);const before=comment();s.gameDay.games.g6.clock='07:59';assert.deepEqual(comment(),before);
+ s.gameDay.games.g6.home=14;assert.equal(comment().id,'no-points');
+ const board=standings(s);assert.match(standingsCommentary(c,board,s.gameDay.games,true)!.text,/share the championship/);
+ board.champions=['p'];assert.match(standingsCommentary(c,board,s.gameDay.games,true)!.text,/Player wins/);
+});

@@ -1,7 +1,7 @@
 import {useEffect,useState} from 'react';
 import type {ContestConfiguration, GameFact, Contest as ContestModel, standings, revealView} from '../../../packages/domain/src/index';
 import {api,choiceLabel} from './Contest';
-type DayView={contest:ContestModel;reveal?:ReturnType<typeof revealView>;board?:ReturnType<typeof standings>;games?:Record<string,GameFact>;overrideGameIds?:string[];providerUpdatedAt?:string};
+type DayView={commentary?:{id:string;text:string};contest:ContestModel;reveal?:ReturnType<typeof revealView>;board?:ReturnType<typeof standings>;games?:Record<string,GameFact>;overrideGameIds?:string[];providerUpdatedAt?:string};
 export function GameDay({id,config,admin}:{id:string;config:ContestConfiguration;admin:boolean}) {
   const [refreshError,setRefreshError]=useState('');const [view,setView]=useState<DayView>();const [error,setError]=useState('');const [busy,setBusy]=useState(false);
   const [game,setGame]=useState(config.games[0]!.id);const [status,setStatus]=useState('FINAL');
@@ -15,6 +15,7 @@ export function GameDay({id,config,admin}:{id:string;config:ContestConfiguration
   const selected=config.games.find(g=>g.id===game)!;
   const label=(slotId:string,choiceId:string)=>{const slot=config.slots.find(s=>s.id===slotId);const choice=slot?.choices.find(c=>c.id===choiceId);return choice?choiceLabel(choice,config):'Unanswered'};
   return <section className="game-day"><h2>{view.contest.phase==='REVEAL'?'The Reveal':view.contest.phase==='FINAL'?'Final standings':'Standings'}</h2>
+    {view.commentary&&<aside className="host-commentary" aria-label="Tailgate commentary"><span>FROM THE CHEAP SEATS</span><p>{view.commentary.text}</p></aside>}
     {(error||refreshError)&&<p role="alert" className="error">{error||refreshError}</p>}
     {view.reveal&&<><h3>{view.reveal.title}</h3><p>Picks are frozen. Full cards unlock after the final Reveal step.</p>{view.reveal.groups.length===0&&<p>{view.reveal.step===0?'Let’s see what everyone picked.':'No matching picks for this step.'}</p>}{view.reveal.groups.map(g=><article key={g.slotId}><h4>{g.label}</h4>{g.choices.map(ch=><p key={ch.choiceId}><strong>{label(g.slotId,ch.choiceId)}</strong>: {ch.players.map(p=>`${p.displayName}${p.confidence?` (${p.confidence} pts)`:''}`).join(', ')}</p>)}</article>)}{admin&&<button disabled={busy} onClick={()=>void act('advance')}>{view.reveal.step===5?'Finish Reveal and publish all picks':'Next Reveal step'}</button>}</>}
     {view.board&&<><p>{view.contest.phase==='FINAL'?'Scoring finalized.':'PTS are banked. PROJ adds what live games would score if they ended now, not a forecast. LEFT is the sum of unresolved pick values; conflicting picks may not all win.'}</p>{view.contest.phase==='FINAL'&&<h3>Champion{view.board.champions.length===1?'':'s'}: {view.board.entries.filter(e=>view.board!.champions.includes(e.participantId)).map(e=>e.displayName).join(', ')||'No players'}</h3>}

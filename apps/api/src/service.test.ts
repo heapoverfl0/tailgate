@@ -156,10 +156,10 @@ test('deadline locks atomically; reveal embargo, audited results, correction and
  const s=await setup();const p=await s.joinPlayer('A');
  await s.call('PUT','/api/contests/week/me/pick-card',{...s.card,expectedCardRevision:0},p.session);
  const base='/api/contests/week/game-day';
- assert.equal(value(await s.call('GET',base)).board,undefined);
+ assert.equal(value(await s.call('GET',base)).board,undefined);assert.equal(value(await s.call('GET',base)).commentary,undefined);
  s.advance();
  assert.equal((await s.call('PUT','/api/contests/week/me/pick-card',{...s.card,expectedCardRevision:1},p.session)).statusCode,409);
- let view=value(await s.call('GET',base));assert.equal(view.contest.phase,'REVEAL');assert.deepEqual(view.reveal.groups,[]);assert.equal(view.board,undefined);
+ let view=value(await s.call('GET',base));assert.equal(view.contest.phase,'REVEAL');assert.deepEqual(view.reveal.groups,[]);assert.equal(view.board,undefined);assert.equal(view.commentary.id,'locked');
  assert.equal((await s.call('POST',base+'/advance',{expectedVersion:view.contest.version})).statusCode,401);
  assert.equal((await s.call('POST',base+'/advance',{expectedVersion:0},s.admin)).statusCode,409);
  for(let step=1;step<=6;step++) {

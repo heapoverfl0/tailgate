@@ -106,11 +106,12 @@ try {
   await call('PUT',`${base}/me/pick-card`,{...card,expectedCardRevision:3},a,409);
   console.log('Recovery passed before and after lock: same card, revoked old sessions, single-use codes');
   let day=(await call('GET',`${base}/game-day`)).body;
-  assert.equal(day.contest.phase,'REVEAL');assert.equal(day.board,undefined);assert.deepEqual(day.reveal.groups,[]);
+  assert.equal(day.contest.phase,'REVEAL');assert.equal(day.board,undefined);assert.deepEqual(day.reveal.groups,[]);assert.equal(day.commentary.id,'locked');
   await call('POST',`${base}/game-day/advance`,{expectedVersion:day.contest.version},'',401);
   for(let step=0;step<6;step++){
     await call('POST',`${base}/game-day/advance`,{expectedVersion:day.contest.version},admin);
     day=(await call('GET',`${base}/game-day`)).body;
+    assert.equal(typeof day.commentary.text,'string');
     if(step<5)assert.equal(day.board,undefined);
   }
   assert.equal(day.board.entries.find(e=>e.displayName==='Synthetic A').picks.length,15);
@@ -152,7 +153,7 @@ try {
   assert.ok(day.board.entries.every(e=>e.projectedPoints===e.points&&e.remainingPoints===0));
   assert.ok(day.board.paths.every(p=>p.status==='RESOLVED'));
   await call('POST',`${base}/game-day/finalize`,{expectedVersion:day.contest.version},admin);
-  day=(await call('GET',`${base}/game-day`)).body;assert.equal(day.contest.phase,'FINAL');assert.equal(day.board.champions.length,1);
+  day=(await call('GET',`${base}/game-day`)).body;assert.equal(day.contest.phase,'FINAL');assert.equal(day.board.champions.length,1);assert.match(day.commentary.text,/Synthetic A wins/);
   await call('POST',`${base}/game-day/result`,{expectedVersion:day.contest.version,gameId:main,fact:{status:'VOID'},reason:'Synthetic post-final rejection'},admin,422);
   const finalAgain=(await call('GET',`${base}/game-day`)).body;assert.deepEqual(finalAgain.board,day.board);
   console.log('HTTPS smoke passed: pregame privacy, concurrent edits, deadline lock, Reveal embargo, results and final standings');
