@@ -1,0 +1,11 @@
+# Shared Live presentation
+
+Implemented from sections 4–5 of the supplied root ASCII mockups. The shared LIVE/MAIN_EVENT/FINAL surface has compact contest identity, standings on the left, featured-game scores and individual Confidence/ATS/Upset/Main Event exposure on the right, the rest of the slate below, and score implications plus commentary along the bottom. The normal participant card view and Reveal embargo remain in place.
+
+The API supplies a public game-exposure view only after Reveal. It validates selections, includes all propositions on each game, and uses the existing projection function for each player's game contribution. NO_UPSET is excluded from game-specific exposure because it has no game. The unresolved point sum counts selection exposure, not a jointly achievable maximum. Bottom contributions are projected minus already-banked points from the featured game. They are not hypothetical reversed-score swings or odds; the heading deliberately says If this score holds rather than claiming a full Biggest Swing model.
+
+Rank arrows compare projected rank with banked rank, not historical movement. Initial game selection uses unresolved player exposure. The browser holds its selected game until it stops being live; clicking another live tile changes the local feature. Automatic importance-based feature switching and commissioner-persisted feature selection are future director work. Every other game stays represented in the slate, with status/category labels and unknown scores rendered as dashes. Clocks remain observed provider values. Long featured-player lists can scroll inside the panel; narrow screens stack the panels.
+
+Verification: 74 tests pass, plus TypeScript and Vite builds. Browser checks used the fictional demo: the complete four-player view fits 1280×720, a 390px narrow viewport has no horizontal overflow, and selecting Mississippi State/Minnesota changes both exposure and projected contributions. Source mockups are preserved unchanged. No packages or AWS permissions added.
+
+Deployment plan presentation.tfplan changes API/poller ZIP and frontend assets only. Deployment has not been applied; explicit approval is pending. The updated cloud smoke has assertions for game count, featured game and per-game projection. The live demo and real contest remain unchanged until deployment.

@@ -220,3 +220,13 @@ test('live commentary requires observed trailing scores, ignores clock-only chan
  const board=standings(s);assert.match(standingsCommentary(c,board,s.gameDay.games,true)!.text,/share the championship/);
  board.champions=['p'];assert.match(standingsCommentary(c,board,s.gameDay.games,true)!.text,/Player wins/);
 });
+
+
+test('shared game exposure includes all categories and uses the authoritative score projection',async()=>{
+ const {livePresentation}=await import('./live-presentation.js');const {standings}=await import('./game-day.js');const {c,card}=fixture();
+ const s={contest,configuration:c,participants:{p:participant},cards:{p:card},gameDay:{revealStep:6,games:{g1:{status:'IN_PROGRESS' as const,home:7,away:10}}}};
+ const presentation=livePresentation(c,standings(s),s.gameDay.games);assert.equal(presentation.featuredGameId,'g1');
+ const g=presentation.games.find(g=>g.id==='g1')!;assert.deepEqual(g.categories,['CONFIDENCE','ATS','UPSET_SPECIAL']);assert.equal(g.players[0]!.projected,9);assert.equal(g.players[0]!.banked,0);assert.equal(g.players[0]!.picks.length,3);
+ card.picks.find(p=>p.slotId==='upset')!.choiceId='coward';const next=livePresentation(c,standings(s),s.gameDay.games);assert.equal(next.games.find(g=>g.id==='g1')!.players[0]!.projected,3);
+ assert.equal(next.games.find(g=>g.id==='main')!.fact,undefined);
+});

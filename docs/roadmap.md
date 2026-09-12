@@ -45,3 +45,5 @@ Live standings now include banked points, projected points/rank and unresolved p
 Commissioner-issued, one-use [session recovery](session-recovery.md) is implemented, preserving existing cards and invalidating prior sessions on redemption. This supersedes the earlier session-recovery-pending note.
 
 The first [rule-based commentary engine](commentary.md) is implemented, tested and deployed following explicit approval. It adds phase-safe Reveal jokes, current live standings/losing-confidence observations and champion lines. Expanded directors, tone controls and persistent commentary history remain pending.
+
+The mockup-based [shared Live presentation](shared-live-presentation.md) is implemented and browser-tested locally; deployment approval is pending. It replaces the stacked shared view with standings, featured game exposure, slate strip and bottom implications/commentary.

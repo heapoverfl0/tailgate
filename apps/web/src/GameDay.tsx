@@ -1,8 +1,10 @@
+import {SharedLive} from './SharedLive';
+import type {livePresentation} from '../../../packages/domain/src/live-presentation';
 import {useEffect,useState} from 'react';
 import type {ContestConfiguration, GameFact, Contest as ContestModel, standings, revealView} from '../../../packages/domain/src/index';
 import {api,choiceLabel} from './Contest';
-type DayView={commentary?:{id:string;text:string};contest:ContestModel;reveal?:ReturnType<typeof revealView>;board?:ReturnType<typeof standings>;games?:Record<string,GameFact>;overrideGameIds?:string[];providerUpdatedAt?:string};
-export function GameDay({id,config,admin}:{id:string;config:ContestConfiguration;admin:boolean}) {
+export type DayView={live?:ReturnType<typeof livePresentation>;commentary?:{id:string;text:string};contest:ContestModel;reveal?:ReturnType<typeof revealView>;board?:ReturnType<typeof standings>;games?:Record<string,GameFact>;overrideGameIds?:string[];providerUpdatedAt?:string};
+export function GameDay({id,config,admin,shared=false}:{id:string;config:ContestConfiguration;admin:boolean;shared?:boolean}) {
   const [refreshError,setRefreshError]=useState('');const [view,setView]=useState<DayView>();const [error,setError]=useState('');const [busy,setBusy]=useState(false);
   const [game,setGame]=useState(config.games[0]!.id);const [status,setStatus]=useState('FINAL');
   const [home,setHome]=useState('');const [away,setAway]=useState('');const [firstTeam,setFirstTeam]=useState('');const [firstScore,setFirstScore]=useState('');const [half,setHalf]=useState('');const [reason,setReason]=useState('');
@@ -12,6 +14,7 @@ export function GameDay({id,config,admin}:{id:string;config:ContestConfiguration
   const act=async(action:string,body:Record<string,unknown>={})=>{if(!view)return;setBusy(true);setError('');try{await api(`${base}/${action}`,'POST',{...body,expectedVersion:view.contest.version});await load();}catch(e){setError(e instanceof Error?e.message:'Request failed');await load().catch(()=>{});}finally{setBusy(false)}};
   const selectGame=(id:string)=>{setGame(id);const f=view?.games?.[id];setStatus(f?.status==='SCHEDULED'?'IN_PROGRESS':f?.status??'FINAL');setHome(f?.home===undefined?'':String(f.home));setAway(f?.away===undefined?'':String(f.away));setFirstTeam(f?.firstTeam??'');setFirstScore(f?.firstScore??'');setHalf(f?.halftime??'');setReason('');};
   if(!view || view.contest.phase==='PREGAME')return null;
+  if(shared&&view.board&&view.live)return <SharedLive id={id} config={config} view={view} refreshError={refreshError}/>;
   const selected=config.games.find(g=>g.id===game)!;
   const label=(slotId:string,choiceId:string)=>{const slot=config.slots.find(s=>s.id===slotId);const choice=slot?.choices.find(c=>c.id===choiceId);return choice?choiceLabel(choice,config):'Unanswered'};
   return <section className="game-day"><h2>{view.contest.phase==='REVEAL'?'The Reveal':view.contest.phase==='FINAL'?'Final standings':'Standings'}</h2>

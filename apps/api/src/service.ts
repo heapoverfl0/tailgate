@@ -1,3 +1,4 @@
+import {livePresentation} from '../../../packages/domain/src/live-presentation.js';
 import {revealCommentary,standingsCommentary} from '../../../packages/domain/src/commentary.js';
 import { parseConfiguration } from './configuration-input.js';
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
@@ -96,7 +97,7 @@ export function createService(repository: Repository, settings: ApiSettings) {
         const board=publicPicks?boardFor(snapshot):undefined;const games=snapshot.gameDay?.games??{};
         const commentary=reveal?revealCommentary(snapshot.configuration,reveal):board?standingsCommentary(snapshot.configuration,board,games,snapshot.contest.phase==='FINAL'):undefined;
         return {statusCode:200,body:{contest:snapshot.contest,reveal,commentary,
-          ...(board?{board,games,overrideGameIds:Object.keys(snapshot.gameDay?.overrides??games),providerUpdatedAt:snapshot.gameDay?.providerUpdatedAt}:{})}};
+          ...(board?{board,games,live:livePresentation(snapshot.configuration,board,games),overrideGameIds:Object.keys(snapshot.gameDay?.overrides??games),providerUpdatedAt:snapshot.gameDay?.providerUpdatedAt}:{})}};
       }
       if(req.method==='POST' && action.startsWith('game-day/')) {
         commissioner(req); const body=bodyObject(req.body);

@@ -101,6 +101,7 @@ export function Contest({ id }: { id: string }) {
   const change = (next: PickCard) => { setDraft(next); setDirty(true); setError(''); setMessage('Unsaved changes'); };
   const action = async (work: () => Promise<void>) => { setBusy(true); setError(''); try { await work(); } catch (e) { setError(describe(e)); } finally { setBusy(false); } };
   if (!view) return <main><a href="/">← All contests</a><h1>{error ? 'Couldn’t open this contest.' : 'Opening your contest…'}</h1>{error && <p role="alert" className="error">{error}</p>}<button onClick={()=>location.reload()}>Try again</button></main>;
+  if(display&&['LIVE','MAIN_EVENT','FINAL'].includes(view.contest.phase))return <main className="display live-shell"><GameDay id={id} config={view.configuration} admin={false} shared/></main>;
   const joinUrl = new URL(`/?contest=${encodeURIComponent(id)}`, location.origin).href;
   const qrAvailable = (contestQr as Record<string,string>)[id] === joinUrl;
   const confidenceSlots = view.configuration.slots.filter(s => s.category === 'CONFIDENCE');

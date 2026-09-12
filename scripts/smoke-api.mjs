@@ -115,6 +115,7 @@ try {
     if(step<5)assert.equal(day.board,undefined);
   }
   assert.equal(day.board.entries.find(e=>e.displayName==='Synthetic A').picks.length,15);
+  assert.equal(day.live.games.length,c.games.length);
   assert.ok(day.board.entries.every(e=>e.projectedPoints===e.points&&Number.isFinite(e.remainingPoints)));
   assert.ok(day.board.paths.every(p=>p.status==='PENDING_EARLIER_GAMES'));
   const observe=async(gameId,fact)=>{
@@ -125,6 +126,7 @@ try {
   console.log('Rehearsal: two submitted cards, deadline rejection, and all six Reveal steps passed');
   await observe('g1',{status:'IN_PROGRESS',home:7,away:10});
   assert.equal(playerA().points,0);assert.equal(playerA().projectedPoints,9);
+  assert.equal(day.live.featuredGameId,'g1');assert.equal(day.live.games.find(g=>g.id==='g1').players.find(p=>p.displayName==='Synthetic A').projected,9);
   assert.equal(day.contest.phase,'LIVE');
   for(const g of c.games.filter(g=>g.id!==c.mainEventGameId))await observe(g.id,{status:'FINAL',home:31,away:27});
   assert.ok(day.board.paths.every(p=>p.status==='ALIVE'));
