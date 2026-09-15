@@ -50,19 +50,21 @@ resource "aws_iam_role_policy" "api" {
   })
 }
 resource "aws_apigatewayv2_api" "api" {
-  name          = "tailgate-api"
-  protocol_type = "HTTP"
+  name                         = "tailgate-api"
+  protocol_type                = "HTTP"
+  disable_execute_api_endpoint = var.maintenance_mode
 }
 resource "aws_lambda_function" "api" {
-  function_name    = "tailgate-api"
-  role             = aws_iam_role.api.arn
-  runtime          = "nodejs22.x"
-  architectures    = ["arm64"]
-  handler          = "dist/apps/api/src/index.handler"
-  filename         = "${path.module}/../../artifacts/api.zip"
-  source_code_hash = filebase64sha256("${path.module}/../../artifacts/api.zip")
-  memory_size      = 256
-  timeout          = 15
+  reserved_concurrent_executions = var.maintenance_mode ? 0 : -1
+  function_name                  = "tailgate-api"
+  role                           = aws_iam_role.api.arn
+  runtime                        = "nodejs22.x"
+  architectures                  = ["arm64"]
+  handler                        = "dist/apps/api/src/index.handler"
+  filename                       = "${path.module}/../../artifacts/api.zip"
+  source_code_hash               = filebase64sha256("${path.module}/../../artifacts/api.zip")
+  memory_size                    = 256
+  timeout                        = 15
   environment {
     variables = {
       TAILGATE_TABLE         = aws_dynamodb_table.tailgate.name

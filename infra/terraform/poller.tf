@@ -36,7 +36,7 @@ resource "aws_lambda_function" "poller" {
   source_code_hash               = filebase64sha256("${path.module}/../../artifacts/api.zip")
   memory_size                    = 256
   timeout                        = 45
-  reserved_concurrent_executions = 1
+  reserved_concurrent_executions = var.maintenance_mode ? 0 : 1
   environment {
     variables = {
       TAILGATE_TABLE      = aws_dynamodb_table.tailgate.name
@@ -58,7 +58,7 @@ resource "aws_cloudwatch_event_rule" "poller" {
   for_each            = { saturday = "cron(* 16-23 ? * SAT *)", sunday = "cron(* 0-7 ? * SUN *)" }
   name                = "tailgate-poller-${each.key}"
   schedule_expression = each.value
-  state               = var.poller_enabled ? "ENABLED" : "DISABLED"
+  state               = (var.poller_enabled && !var.maintenance_mode) ? "ENABLED" : "DISABLED"
 }
 resource "aws_cloudwatch_event_target" "poller" {
   for_each = aws_cloudwatch_event_rule.poller

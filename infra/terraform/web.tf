@@ -57,7 +57,7 @@ resource "aws_cloudfront_response_headers_policy" "web" {
   }
 }
 resource "aws_cloudfront_distribution" "web" {
-  enabled             = true
+  enabled             = !var.maintenance_mode
   is_ipv6_enabled     = true
   default_root_object = "index.html"
   price_class         = "PriceClass_100"
