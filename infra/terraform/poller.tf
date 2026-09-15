@@ -8,7 +8,7 @@ variable "cfbd_api_key" {
 }
 variable "poller_enabled" {
   type    = bool
-  default = true
+  default = false
 }
 resource "aws_cloudwatch_log_group" "poller" {
   name              = "/aws/lambda/tailgate-poller"
